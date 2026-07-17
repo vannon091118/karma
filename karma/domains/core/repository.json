@@ -1,0 +1,126 @@
+{
+  "id": "repository",
+  "layer": "core",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "codebase_structure_analysis",
+    "dependency_graph",
+    "module_identification",
+    "pattern_detection",
+    "architecture_boundary_detection"
+  ],
+  "depends_on": [],
+  "evidence_rules": {
+    "git_repo": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/.git",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "source_files": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/*.py",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.rs",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.js",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.ts",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.java",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.go",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.cpp",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.cs",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "config_files": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/pyproject.toml",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/Cargo.toml",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/package.json",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/pom.xml",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/go.mod",
+          "confidence": 0.8
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Repository contains source code in recognized languages",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Repository uses a known build system / package manager",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.8
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team"
+    ],
+    "default_owner": "core-team"
+  },
+  "metadata": {
+    "description": "Universal repository analysis: structure, dependencies, modules, patterns"
+  }
+}

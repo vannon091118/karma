@@ -1,0 +1,144 @@
+{
+  "id": "python",
+  "layer": "technology",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "type_checking",
+    "packaging",
+    "dependency_management",
+    "virtual_environments",
+    "async_patterns"
+  ],
+  "depends_on": [
+    "repository",
+    "testing"
+  ],
+  "evidence_rules": {
+    "python_files": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/*.py",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "pyproject": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/pyproject.toml",
+          "confidence": 0.95
+        }
+      ]
+    },
+    "requirements": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/requirements*.txt",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/setup.py",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/setup.cfg",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "type_hints": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "from typing import|import typing|: \\w+\\[|-> \\w+",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/mypy.ini",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/pyproject.toml",
+          "confidence": 0.5
+        }
+      ]
+    },
+    "virtualenv": {
+      "type": "runtime",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/.venv/**",
+          "confidence": 0.6
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/venv/**",
+          "confidence": 0.6
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/poetry.lock",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/Pipfile.lock",
+          "confidence": 0.8
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project is written in Python",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.9
+    },
+    {
+      "statement": "Project uses modern Python packaging (pyproject.toml)",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.9
+    },
+    {
+      "statement": "Project uses type hints",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.6
+    },
+    {
+      "statement": "Project manages dependencies with lock files",
+      "evidence_types": [
+        "runtime"
+      ],
+      "confidence_threshold": 0.7
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team",
+      "python-team"
+    ],
+    "default_owner": "python-team"
+  },
+  "metadata": {
+    "description": "Python ecosystem: type checking, packaging, dependencies, venvs"
+  }
+}

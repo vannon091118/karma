@@ -1,0 +1,102 @@
+{
+  "id": "quality",
+  "layer": "core",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "code_quality_analysis",
+    "technical_debt_detection",
+    "maintainability_assessment",
+    "complexity_analysis",
+    "duplication_detection"
+  ],
+  "depends_on": [
+    "repository"
+  ],
+  "evidence_rules": {
+    "linting": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/.ruff.toml",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/ruff.toml",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/.flake8",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/mypy.ini",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/pyproject.toml",
+          "regex": "ruff|mypy|flake8|pylint",
+          "confidence": 0.6
+        }
+      ]
+    },
+    "complexity": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "command_output",
+          "command": "radon cc -a . 2>/dev/null || echo 'no-radon'",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "duplication": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "command_output",
+          "command": "jscpd . 2>/dev/null || echo 'no-jscpd'",
+          "confidence": 0.8
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project uses automated code quality tooling",
+      "evidence_types": [
+        "test",
+        "source"
+      ],
+      "confidence_threshold": 0.6
+    },
+    {
+      "statement": "Project monitors code complexity",
+      "evidence_types": [
+        "test"
+      ],
+      "confidence_threshold": 0.6
+    },
+    {
+      "statement": "Project detects code duplication",
+      "evidence_types": [
+        "test"
+      ],
+      "confidence_threshold": 0.6
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team"
+    ],
+    "default_owner": "core-team"
+  },
+  "metadata": {
+    "description": "Code quality domain: linting, complexity, duplication, maintainability"
+  }
+}

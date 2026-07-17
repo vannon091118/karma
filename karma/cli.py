@@ -812,40 +812,24 @@ def _match_domains(user_request: str) -> Set[str]:
         keywords = [kw.lower() for kw in domain_info.get("keywords", [])]
         if any(kw in request_lower for kw in keywords):
             matched.add(domain_name)
-    if not matched:
-        matched = {"engine", "runtime"}
+    # NO FALLBACK - unknown domains are unknown, not engine/runtime
     return matched
 
 
 def _select_skills(user_request: str) -> List[str]:
-    """Auto-select skills relevant to a user request."""
-    manifest = _load_manifest()
-    matched_domains = _match_domains(user_request)
-    groups = manifest.get("skill_groups", {})
+    """Phase 4.1 minimal: returns pipeline-skills only.
 
-    relevant_groups: Set[str] = {"pipeline"}  # Always include pipeline
-    domain_to_group = {
-        "engine": "syxcraft", "runtime": "syxcraft", "save": "syxcraft",
-        "reflection": "syxcraft", "assets": "syxcraft", "settlement": "syxcraft",
-        "world": "syxcraft", "ui": "syxcraft",
-        "performance": "meta", "documentation": "quality", "release": "quality",
-        "research": "infrastructure",
-    }
-    for domain in matched_domains:
-        group = domain_to_group.get(domain)
-        if group:
-            relevant_groups.add(group)
-    if "documentation" in matched_domains or "research" in matched_domains:
-        relevant_groups.add("quality")
+    Capabilities resolution will be reintroduced in Phase 4.2 via
+    karma.capabilities.resolver, exposed through DomainLoader.
+    Until then, `karma dispatch` is intentionally broken — see Phase 4.5.
+    """
+    return list(PIPELINE_SKILLS)
 
-    selected: List[str] = []
-    for gname in relevant_groups:
-        ginfo = groups.get(gname, {})
-        for skill in ginfo.get("load_order", ginfo.get("skills", [])):
-            if skill not in selected:
-                selected.append(skill)
 
-    return selected
+# TODO(Phase 5+): migrate to karma/pipeline/ module — these hardcoded
+# pipeline skills live here only until that module exists. Listed here
+# so they're discoverable in one place.
+PIPELINE_SKILLS = ["dump-analyse", "konzept", "execution", "tests", "workflow", "loop"]
 
 
 @cli.group()

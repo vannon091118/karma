@@ -83,6 +83,46 @@ Request → ContextOptimizer → Prompt → LLM → FalsificationGate
 
 ---
 
+## Domain System (Phase 4)
+
+Since v0.4, KARMA's knowledge structure migrated from a flat `karma/domains/MANIFEST.json`
+to a layered, evidence-backed domain JSON system:
+
+karma/domains/
+├── core/                    # Universal engineering (repository, security, quality, testing, architecture)
+├── technology/              # Language ecosystems (python, rust, typescript, …)
+├── infrastructure/          # Runtime/platform (docker, kubernetes, cloud, …)
+└── projects/<name>/         # Project-specific overrides (syxcraft, vigilguard, …)
+
+Each domain JSON declares `capabilities`, `evidence_rules`, `claims`, `ownership`,
+and (Phase 4.3c) `matching.keywords`. Skill routing now flows:
+
+```
+Domain → matching.keywords → matched domains
+                          → capabilities
+                          → capability → Provider (skill, priority, requires?)
+                          → Resolver sorts → selected skills
+```
+
+The legacy `karma/domains/MANIFEST.json` is being phased out (Phase 4.6 migration
+with deprecation markers).
+
+**Five architecture invariants** that prevent the new system from rotting like the old one:
+
+1. **Pipeline is not a Domain.** `dump-analyse / konzept / execution / tests / workflow / loop`
+   live in `karma/pipeline/` once separated; they are NOT domains.
+2. **Keywords belong in the Domain definition.** No separate dispatch/index file.
+3. **Capability registry is provider-based**, not a flat list. `Trufflehog / Semgrep / Custom`
+   join later through priority, no schema bump.
+4. **The Loader is the public API.** `cli.py` never imports the Resolver directly — the Loader imports
+   it and exposes a stable interface.
+5. **Domains carry no Skills.** Adding "skills": [...]" to a Domain JSON fails schema validation.
+
+> See `karma/domains/global/DOMAIN_ARCHITECTURE.md` for the full design and `ARCHITECTURE.md`
+> for the Phase 4 plan with status per phase.
+
+---
+
 ## Architecture
 
 The system is split into three layers. They have exactly one communication direction: downward.
@@ -155,6 +195,9 @@ It maps tasks to facts via two relation types:
 
 Both relations carry `weight`, `confidence`, and `last_seen`. The `ContextOptimizer` reads these when selecting facts for the next execution: facts that have historically caused confusion are penalized and potentially excluded.
 
+**Phase 5+ note:** edges will additionally carry `evidence_ids` and `status` so the graph
+can answer "which Claims back this relation?" rather than acting as an isolated belief store.
+
 ---
 
 ### ♻️ Replay Engine
@@ -173,29 +216,17 @@ This makes it possible to compare `Policy v1` against `Policy v2` without destro
 
 ## Project Structure
 
-```
 karma/
+├── cli/
 ├── core/
-│   ├── persistence.py          # SQLite factory, transactions, schema migration
-│   ├── context_snapshot.py     # Immutable, compressed context archive
-│   └── index.py                # Token estimation
 ├── ml/
-│   ├── experience_store.py     # Append-only event log (source of truth)
-│   ├── reward_model.py         # Scoring with configurable weights
-│   ├── pattern_learner.py      # Pattern extraction from reward signals
-│   ├── knowledge_graph.py      # Derived fact→task relation view
-│   ├── replay_engine.py        # Re-derive learned state from raw events
-│   ├── training_loop.py        # Orchestrates learning cycles
-│   └── needs_engine.py         # Detects what the system needs to learn next
-├── runtime/
-│   ├── orchestrator.py         # Cascade execution engine with ML loop
-│   ├── outcome_middleware.py   # Bridges execution → learning pipeline
-│   ├── context_optimizer.py    # Token-budgeted, KG-informed context assembly
-│   ├── prompt_variant_store.py # A/B variant tracking with EMA statistics
-│   └── falsification_gate.py  # 6-probe output validator
-└── cli/
-    └── cli.py                  # Full command-line interface
-```
+├── experimental_runtime/
+├── skills/
+├── domains/
+│   ├── schema.json                 # Phase 4 SSOT for Domain-JSON definitions
+│   ├── loader.py                   # DomainLoader (becomes Public API in 4.3)
+│   └── core/ technology/ infrastructure/ projects/<name>/
+└── cli.py
 
 ---
 
@@ -251,9 +282,25 @@ The next execution uses the updated KG to select better facts. Better context �
 
 ---
 
+## Phase 4 in Motion
+
+**Current state:** learning kernel + emerging Domain System. Architecture-Tests: 25 grün / 1 KG-OOS-Fail.
+
+Phase 4 progress (architecture is locked, code in flight):
+
+- [x] **4.0** Architecture contract: 5 rules + Loader-as-API-constraint, signed
+- [x] **4.1** `cli.py::capability_to_skills` Hardcoding entfernt; `_select_skills` ist 6-Zeilen-Stub mit `list(PIPELINE_SKILLS)` Return; `PIPELINE_SKILLS` als Modul-Constant mit `TODO(Phase 5+)`-Marker
+- [ ] **4.3** DomainLoader Public API: stateless Factory, `load(scope, project)` Pflicht, `load_all()` entfernt (Tresor-Prinzip), `LoadedDomains`-Wrapper mit `has_domain/get_domain/list_capabilities`; Layer-Isolation `core→project depends_on` per `ValueError`
+- [ ] **4.4** Architecture-Tests: kein Private-`loader._domains`-Access, neue Tests wie `test_dispatcher_uses_loader`, `test_project_domains_are_isolated`, `test_domain_cannot_define_skills`, `test_core_domains_cannot_depend_on_project_domains`
+- [ ] **4.2** `karma/capabilities/registry.json` (provider-basiert) + `karma/capabilities/resolver.py` (**Rule 4**: Loader importiert Resolver, cli.py NICHT)
+- [ ] **4.5** `cli.py::_match_domains` auf Domain-JSONs (`matching.keywords`); `_select_skills` ruft `loader.resolve_skills()`
+- [ ] **4.6** Legacy-MANIFEST-Migration: `engine/runtime/save/...` → `projects/syxcraft/*.json` mit `matching.keywords`; `documentation/release/research/performance` → Capabilities; Deprecation-Marker im Alt-MANIFEST
+
+**Out-of-Band (Phase 5+):** `karma/pipeline/` Top-Level-Modul (Pipeline ≠ Domain); KnowledgeGraph-Edges mit `evidence_ids, status, confidence`; `evidence.py frozen=True`.
+
 ## Roadmap
 
-The current state: **a learning kernel with full traceability**.
+The current state: **a learning kernel with full traceability, now hybridizing into an evidence-backed Domain System**.
 
 The next layer — **Runtime Governance** — will introduce:
 

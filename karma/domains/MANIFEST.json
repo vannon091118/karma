@@ -6,6 +6,61 @@
     "schema_version": 2
   },
   "domains": {
+     "repository": {
+       "description": "Generic repository analysis, code structure, static analysis",
+       "priority": 1,
+       "memory_keys": ["structure", "modules", "dependencies", "patterns"],
+       "knowledge": "",
+       "templates": "",
+       "checklists": "",
+       "keywords": ["repository", "codebase", "code", "module", "structure", "analysis", "static", "audit", "review"],
+       "depends_on": [],
+       "cross_refs": ["security", "quality", "python"]
+     },
+     "security": {
+       "description": "Security audit, vulnerability scanning, license compliance, secrets detection",
+       "priority": 2,
+       "memory_keys": ["vulnerabilities", "licenses", "secrets", "compliance"],
+       "knowledge": "",
+       "templates": "",
+       "checklists": "",
+       "keywords": ["security", "audit", "vulnerability", "license", "compliance", "secret", "cve", "hardening"],
+       "depends_on": ["repository"],
+       "cross_refs": ["repository", "compliance"]
+     },
+     "python": {
+       "description": "Python-specific analysis, type checking, packaging, dependencies",
+       "priority": 3,
+       "memory_keys": ["types", "packaging", "deps", "pyproject", "pytest"],
+       "knowledge": "",
+       "templates": "",
+       "checklists": "",
+       "keywords": ["python", "pyproject", "pytest", "mypy", "ruff", "type", "package", "pip", "venv"],
+       "depends_on": ["repository"],
+       "cross_refs": ["repository", "quality"]
+     },
+     "docker": {
+       "description": "Docker/Compose config analysis, container security, drift detection",
+       "priority": 3,
+       "memory_keys": ["compose", "services", "networks", "volumes", "healthchecks"],
+       "knowledge": "",
+       "templates": "",
+       "checklists": "",
+       "keywords": ["docker", "compose", "container", "service", "healthcheck", "volume", "network", "drift", "vigilguard"],
+       "depends_on": ["repository"],
+       "cross_refs": ["security", "repository"]
+     },
+     "quality": {
+       "description": "Code quality, test coverage, linting, technical debt",
+       "priority": 4,
+       "memory_keys": ["coverage", "lint", "complexity", "debt", "duplication"],
+       "knowledge": "",
+       "templates": "",
+       "checklists": "",
+       "keywords": ["quality", "coverage", "test", "lint", "complexity", "debt", "duplication", "maintainability"],
+       "depends_on": ["repository"],
+       "cross_refs": ["python", "security", "repository"]
+     },
     "engine": {
       "description": "Snake2D engine hooks, packages, version compat, SCRIPT interface",
       "priority": 1,

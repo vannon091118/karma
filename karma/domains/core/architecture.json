@@ -1,0 +1,89 @@
+{
+  "id": "architecture",
+  "layer": "core",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "adr_detection",
+    "pattern_recognition",
+    "boundary_analysis",
+    "dependency_direction",
+    "modularity_assessment"
+  ],
+  "depends_on": [
+    "repository"
+  ],
+  "evidence_rules": {
+    "adrs": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/adr/**/*.md",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/docs/architecture/**/*.md",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/ARCHITECTURE.md",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "design_docs": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/DESIGN.md",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/design/**/*.md",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "module_boundaries": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "command_output",
+          "command": "grep -r 'import.*internal' --include='*.py' . 2>/dev/null | head -5 || echo 'none'",
+          "confidence": 0.6
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project documents architectural decisions (ADRs)",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.6
+    },
+    {
+      "statement": "Project enforces module boundaries",
+      "evidence_types": [
+        "test"
+      ],
+      "confidence_threshold": 0.5
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team",
+      "architects"
+    ],
+    "default_owner": "architects"
+  },
+  "metadata": {
+    "description": "Architecture domain: ADRs, patterns, boundaries, modularity"
+  }
+}

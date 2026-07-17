@@ -1,0 +1,86 @@
+{
+  "id": "syxcraft",
+  "layer": "project",
+  "scope": "project",
+  "version": "1.0.0",
+  "capabilities": [
+    "snake2d_engine_hooks",
+    "save_load_protocol",
+    "reflection_util",
+    "v71_asset_pipeline",
+    "world_simulation",
+    "modding_framework"
+  ],
+  "depends_on": [
+    "repository",
+    "quality",
+    "testing"
+  ],
+  "evidence_rules": {
+    "snake2d_hooks": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "using Snake2D|Snake2D\\.|Hook\\(",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "save_protocol": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "FilePutter|FileGetter|SaveVersion",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "v71_assets": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "V71|13 PNG|sprite_format_v71",
+          "confidence": 0.8
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project uses Snake2D engine hooks",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Project implements custom save/load protocol",
+      "evidence_types": [
+        "source",
+        "test"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Project uses V71 asset pipeline (13 PNG sprites)",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "project-owner",
+      "syxcraft-maintainer"
+    ],
+    "default_owner": "syxcraft-maintainer"
+  },
+  "metadata": {
+    "description": "Songs of Syx V71 modding domain: engine hooks, save protocol, V71 assets, world simulation",
+    "project": "syxcraft"
+  }
+}

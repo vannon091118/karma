@@ -1,0 +1,146 @@
+{
+  "id": "docker",
+  "layer": "infrastructure",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "compose_analysis",
+    "service_discovery",
+    "healthcheck_validation",
+    "network_policy_check",
+    "volume_management",
+    "drift_detection"
+  ],
+  "depends_on": [
+    "repository",
+    "security"
+  ],
+  "evidence_rules": {
+    "compose_file": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/docker-compose.yml",
+          "confidence": 0.95
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/docker-compose.yaml",
+          "confidence": 0.95
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/compose.yml",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/compose.yaml",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "dockerfile": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/Dockerfile*",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/.dockerignore",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "healthchecks": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "healthcheck:",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_content_regex",
+          "regex": "HEALTHCHECK",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "port_binding": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "127\\.0\\.0\\.1|localhost",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "resource_limits": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "deploy:|resources:|limits:|reservations:",
+          "confidence": 0.6
+        }
+      ]
+    },
+    "drift_detection": {
+      "type": "runtime",
+      "patterns": [
+        {
+          "kind": "command_output",
+          "command": "docker compose config 2>/dev/null && echo 'valid' || echo 'invalid'",
+          "confidence": 0.9
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project uses Docker Compose for service orchestration",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.9
+    },
+    {
+      "statement": "Project defines healthchecks for services",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Project binds ports to localhost only",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.6
+    },
+    {
+      "statement": "Project validates Docker Compose configuration",
+      "evidence_types": [
+        "runtime"
+      ],
+      "confidence_threshold": 0.8
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team",
+      "platform-team",
+      "security-team"
+    ],
+    "default_owner": "platform-team"
+  },
+  "metadata": {
+    "description": "Docker/Compose infrastructure: compose analysis, healthchecks, drift detection, port policy"
+  }
+}

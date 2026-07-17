@@ -1,0 +1,129 @@
+{
+  "id": "testing",
+  "layer": "core",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "test_infrastructure_detection",
+    "coverage_analysis",
+    "test_strategy_assessment",
+    "flakiness_detection",
+    "contract_testing"
+  ],
+  "depends_on": [
+    "repository"
+  ],
+  "evidence_rules": {
+    "test_files": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/test*.py",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*_test.py",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/tests/**/*.py",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/test*.rs",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*_test.rs",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/test*.js",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.test.js",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/*.spec.js",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "test_config": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/pytest.ini",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/pyproject.toml",
+          "confidence": 0.6
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/jest.config.*",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/vitest.config.*",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "coverage": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "command_output",
+          "command": "python -m pytest --co -q 2>/dev/null | wc -l || echo 0",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/.coverage*",
+          "confidence": 0.6
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project has test infrastructure in place",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Project measures test coverage",
+      "evidence_types": [
+        "test"
+      ],
+      "confidence_threshold": 0.6
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team",
+      "qa-team"
+    ],
+    "default_owner": "qa-team"
+  },
+  "metadata": {
+    "description": "Testing domain: infrastructure, coverage, strategy, flakiness"
+  }
+}

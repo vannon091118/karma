@@ -1,0 +1,71 @@
+{
+  "id": "syxcraft-engine",
+  "layer": "project",
+  "scope": "project",
+  "version": "1.0.0",
+  "capabilities": [
+    "snake2d_hook_management",
+    "script_interface_generation",
+    "package_version_compat",
+    "render_pipeline_integration"
+  ],
+  "depends_on": [
+    "repository",
+    "architecture"
+  ],
+  "evidence_rules": {
+    "snake2d_hooks": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/World/Scripts/Core scripts/**/*.cs",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_content_regex",
+          "glob": "**/*.cs",
+          "regex": "using Snake2D|using HarmonyLib|using Verse",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "script_interface": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/Script*.cs",
+          "confidence": 0.8
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project integrates with Snake2D engine via Harmony hooks",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.8
+    },
+    {
+      "statement": "Project defines custom SCRIPT interface for modding",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "project-owner",
+      "syxcraft-maintainer"
+    ],
+    "default_owner": "syxcraft-maintainer"
+  },
+  "metadata": {
+    "description": "SyxCraft engine integration: hooks, script interface, package compatibility",
+    "project": "syxcraft"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "id": "vigilguard-compliance",
+  "layer": "project",
+  "scope": "project",
+  "version": "1.0.0",
+  "capabilities": [
+    "license_enforcement",
+    "device_binding",
+    "activation_flow",
+    "offline_verification"
+  ],
+  "depends_on": [
+    "security",
+    "docker"
+  ],
+  "evidence_rules": {
+    "license_enforcement": {
+      "type": "runtime",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/license.py",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_content_regex",
+          "regex": "activate_device|device_fingerprint|get_device_fingerprint",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_content_regex",
+          "regex": "Ed25519|_verify_ed25519|VerifyKey",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_content_regex",
+          "regex": "GRACE_RUNS|grace_period",
+          "confidence": 0.7
+        }
+      ]
+    },
+    "offline_verification": {
+      "type": "source",
+      "patterns": [
+        {
+          "kind": "file_content_regex",
+          "regex": "check_activation|verify_token",
+          "confidence": 0.8
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project enforces license activation with device binding",
+      "evidence_types": [
+        "runtime",
+        "source"
+      ],
+      "confidence_threshold": 0.8
+    },
+    {
+      "statement": "Project supports offline license verification after initial activation",
+      "evidence_types": [
+        "source"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Project has grace period for unactivated devices",
+      "evidence_types": [
+        "runtime"
+      ],
+      "confidence_threshold": 0.6
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "project-owner",
+      "vigilguard-maintainer"
+    ],
+    "default_owner": "vigilguard-maintainer"
+  },
+  "metadata": {
+    "description": "VigilGuard-specific: license enforcement, device binding, activation flow",
+    "project": "vigilguard"
+  }
+}

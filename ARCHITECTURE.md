@@ -16,7 +16,8 @@
 | **Needs Engine** | ✅ Fertig | 5 Detektoren, Lifecycle detected → resolved \| escalated |
 | **Learning Engine** | ✅ Fertig | PatternLearner + RewardModel + TrainingLoop |
 | **Self-Improvement** | ✅ Fertig | Nur durch validierten Reward-Score, Safety-Stop bei degrading trend |
-| **Knowledge Graph** | 🟡 Partiell | Schema v3, Relations-API, CLI, Graph-Traversal — Evidence-Binding fehlt |
+| **Knowledge Graph** | 🟡 Partiell | Schema v3, Relations-API, CLI, Graph-Traversal — `evidence_ids/ confidence/ status` auf Edges fehlt (Phase 5+) |
+| **Domain System** | 🟡 Im Aufbau | JSON-Schema validiert, Loader + 10 Domain-JSONs (5 core + 1 tech + 1 infra + 3 project). Phase 4.1 done. Phase 4.3–4.6 offen. |
 
 **Teststand:** 36 Tests, 0 Fehler, 0 Warnungen.
 
@@ -134,18 +135,31 @@ Safety-Stop: Reward 3× < 0.20 → CRITICAL Need, Loop stoppt.
 
 ---
 
-## Offene Baustellen
+## Phase 4 Plan — Domain System Hartziehen
 
-| # | Baustein | Status | Nächster Schritt |
+Phase-Reihenfolge (gelockt und validiert mit Thinker-Validierung):
+
+| # | Phase | Status | Liefert |
 |---|---|---|---|
-| 1 | **Claim Resolver** | 🔜 | Claim → Evidence → Status (UNVERIFIED/SUPPORTED/CONFIRMED/CONFLICTED) |
-| 2 | **Graph-Populierung** | 🔜 | Evidence-backed Edges: Claim → Claim mit Evidence-IDs + Confidence |
-| 3 | **Human-Review Queue** | 🔜 | Tabelle + CLI für konfliktierte Claims |
-| 4 | **Scheduler** | 🔜 | Cron-Dispatcher für `run_cycle()` |
-| 5 | **Cross-Projekt-Lernen** | 🔜 | Pattern-Transfer nur nach Claim-Resolver + Provenance |
+| 0 | Vertrag | ✅ | 5 Regeln + Loader-as-API-Constraint |
+| 1 | **4.1** Dispatcher-Decoupling | ✅ | `cli.py::capability_to_skills` raus, `_select_skills` Pipeline-Skills only, architektur-tests grün |
+| 2 | **4.3** Loader Public API | 🔜 | `load(scope, project)` Pflicht, `load_all()` entfernt, `LoadedDomains`-Wrapper mit `has_domain/get_domain/list_capabilities` |
+| 3 | **4.4** Strukturtests | 🔜 | Architecture-Tests ohne Resolver, kein Private-Access, Layer-Isolation |
+| 4 | **4.2** Capability Resolver + Registry | 🔜 | `karma/capabilities/registry.json` provider-basiert, Resolver vom Loader importiert (Rule 4) |
+| 5 | **4.5** Dispatcher Wiring | 🔜 | `cli.py::_match_domains` auf Domain-JSONs, `_select_skills` ruft `loader.resolve_skills()` |
+| 6 | **4.6** Legacy-Migration | 🔜 | `engine/runtime/save/reflection/assets/ui/world` → `projects/syxcraft/*.json` mit `matching.keywords`. `documentation/release/research/performance` → Capabilities. Alt-MANIFEST mit `{deprecated: true, replacement: ...}`. |
 
-> Reihenfolge: Evidence → Graph → Review → Scheduler → Cross-Project.
-> Der Graph darf kein Orakel werden. predecessoren müssen zuerst stehen.
+**Out-of-Band (Phase 5+):** `karma/pipeline/` Top-Level-Modul, KnowledgeGraph-`evidence_ids` auf Edges, `evidence.py frozen=True`.
+
+### 5 Architektur-Regeln (Non-Negotiable)
+
+| Regel | Begründung |
+|---|---|
+| **Pipeline ist keine Domain** | Pipeline = Orchestrierung, nicht Wissen. `dump-analyse/konzept/...` leben in `karma/pipeline/`, nicht in `karma/domains/`. |
+| **Keywords gehören in die Domain** | `matching.keywords` im Domain-JSON. Keine separate Keyword-Datei. |
+| **Capability-Registry ist provider-basiert** | `{cap: {providers: [{skill, priority, requires?, weight?}]}}` — kein flacher Skill-String-Lookup, erweiterbar ohne Schema-Bump. |
+| **Loader ist die Public API** | `cli.py` importiert niemals direkt den `resolver.py`. Loader importiert Resolver und exposiert `resolve_skills_for_domains()`. |
+| **Domains tragen keine Skills** | `additionalProperties: false` im Schema + Test `test_domain_cannot_define_skills` lehnen `skills: [...]` ab. |
 
 ---
 

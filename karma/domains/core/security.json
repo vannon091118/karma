@@ -1,0 +1,132 @@
+{
+  "id": "security",
+  "layer": "core",
+  "scope": "global",
+  "version": "1.0.0",
+  "capabilities": [
+    "vulnerability_scanning",
+    "secret_detection",
+    "license_compliance",
+    "dependency_audit",
+    "drift_detection",
+    "sbom_generation"
+  ],
+  "depends_on": [
+    "repository",
+    "testing"
+  ],
+  "evidence_rules": {
+    "secret_detection": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/.gitleaks.toml",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/.secrets.baseline",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/trufflehog*",
+          "confidence": 0.8
+        }
+      ]
+    },
+    "license_compliance": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/license-check*",
+          "confidence": 0.8
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/license.py",
+          "confidence": 0.7
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/LICENSE*",
+          "confidence": 0.5
+        }
+      ]
+    },
+    "dependency_audit": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/requirements*.txt",
+          "confidence": 0.4
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/pyproject.toml",
+          "confidence": 0.4
+        }
+      ]
+    },
+    "drift_detection": {
+      "type": "test",
+      "patterns": [
+        {
+          "kind": "file_glob",
+          "glob": "**/vigilguard.yml",
+          "confidence": 0.9
+        },
+        {
+          "kind": "file_glob",
+          "glob": "**/vigilguard.yaml",
+          "confidence": 0.9
+        }
+      ]
+    }
+  },
+  "claims": [
+    {
+      "statement": "Project scans for secrets in codebase",
+      "evidence_types": [
+        "test"
+      ],
+      "confidence_threshold": 0.7
+    },
+    {
+      "statement": "Project validates license compliance",
+      "evidence_types": [
+        "test",
+        "source"
+      ],
+      "confidence_threshold": 0.6
+    },
+    {
+      "statement": "Project audits dependencies for vulnerabilities",
+      "evidence_types": [
+        "test"
+      ],
+      "confidence_threshold": 0.5
+    },
+    {
+      "statement": "Project detects configuration drift",
+      "evidence_types": [
+        "test",
+        "source"
+      ],
+      "confidence_threshold": 0.6
+    }
+  ],
+  "ownership": {
+    "mutable_by": [
+      "core-team",
+      "security-team"
+    ],
+    "default_owner": "security-team"
+  },
+  "metadata": {
+    "description": "Security domain: vulnerabilities, secrets, licenses, dependencies, drift"
+  }
+}

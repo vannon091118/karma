@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://karma.evey.cc/schemas/domain-v1.json",
+  "title": "KARMA Domain Definition",
+  "description": "Single Source of Truth for Domain Definitions. No skill mapping, no hardcoded routing. Capabilities + Evidence Rules only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "layer",
+    "scope",
+    "capabilities",
+    "evidence_rules"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique domain identifier. Lowercase, kebab-case. Used as primary key across all layers."
+    },
+    "layer": {
+      "type": "string",
+      "enum": [
+        "core",
+        "technology",
+        "infrastructure",
+        "project"
+      ],
+      "description": "Architectural layer. Determines load order and isolation rules."
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "global",
+        "project"
+      ],
+      "description": "Scope of validity. global = available to all projects. project = isolated to owning project."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0",
+      "description": "Semantic version. Breaking changes to evidence_rules or capabilities require major bump."
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "description": "Capability name. Abstract ability this domain provides. NOT a skill name. Examples: secret_detection, vulnerability_scan, dependency_analysis, config_drift_detection"
+      },
+      "description": "Capabilities this domain offers. Resolved to skills at runtime by CapabilityResolver, not hardcoded here."
+    },
+    "depends_on": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "default": [],
+      "description": "Domain IDs this domain depends on. Load order respects dependencies. Cross-layer deps allowed: project → infrastructure → technology → core."
+    },
+    "evidence_rules": {
+      "type": "object",
+      "description": "Declarative rules for generating Claims and collecting Evidence. Each key is a claim statement pattern.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type",
+          "patterns"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "source",
+              "runtime",
+              "test",
+              "replay",
+              "human"
+            ],
+            "description": "EvidenceType this rule produces. Maps to EvidenceType enum."
+          },
+          "patterns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "file_glob",
+                    "file_content_regex",
+                    "command_output",
+                    "api_response",
+                    "manual"
+                  ]
+                },
+                "glob": {
+                  "type": "string",
+                  "description": "Glob pattern for file_glob kind. Relative to project root."
+                },
+                "regex": {
+                  "type": "string",
+                  "description": "Regex pattern for file_content_regex kind."
+                },
+                "command": {
+                  "type": "string",
+                  "description": "Shell command for command_output kind. Run in project root."
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0,
+                  "default": 0.5,
+                  "description": "Base confidence for evidence produced by this pattern."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "description": "Explicit claims this domain asserts when activated. Each claim becomes a Claim object if evidence supports it.",
+      "items": {
+        "type": "object",
+        "required": [
+          "statement",
+          "evidence_types"
+        ],
+        "properties": {
+          "statement": {
+            "type": "string",
+            "description": "Human-readable claim statement. E.g., 'Repository uses Docker Compose for service orchestration'"
+          },
+          "evidence_types": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "source",
+                "runtime",
+                "test",
+                "replay",
+                "human"
+              ]
+            },
+            "description": "Required evidence types to support this claim. All must be present for CONFIRMED status."
+          },
+          "confidence_threshold": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.7,
+            "description": "Minimum aggregate confidence for this claim to be SUPPORTED."
+          }
+        }
+      },
+      "default": []
+    },
+    "ownership": {
+      "type": "object",
+      "description": "Who can modify this domain definition. Enforced by Loader at write time.",
+      "required": [
+        "mutable_by"
+      ],
+      "properties": {
+        "mutable_by": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "core-team",
+              "project-owner",
+              "domain-maintainer",
+              "architects",
+              "security-team",
+              "qa-team",
+              "python-team",
+              "platform-team",
+              "syxcraft-maintainer",
+              "vigilguard-maintainer",
+              "any"
+            ]
+          },
+          "description": "Roles allowed to modify this domain. 'any' = no restriction (only for project scope)."
+        },
+        "default_owner": {
+          "type": "string",
+          "enum": [
+            "core-team",
+            "project-owner",
+            "domain-maintainer",
+            "architects",
+            "security-team",
+            "qa-team",
+            "python-team",
+            "platform-team",
+            "syxcraft-maintainer",
+            "vigilguard-maintainer",
+            "any"
+          ],
+          "description": "Default owner for new instances of this domain (for project scope)."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Free-form metadata. Not used by runtime. For documentation/tooling.",
+      "additionalProperties": true
+    }
+  }
+}
