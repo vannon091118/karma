@@ -11,13 +11,14 @@
 |---|---|---|
 | **Projektisolation** | ✅ Fertig | `~/.karma/projects/<name>.db` — jedes Projekt eigene SQLite-Datei |
 | **Ein Persistenzpfad** | ✅ Fertig | `create_project_persistence()` — einziger Factory, kein Legacy-JSON |
-| **Falsification Gate** | ✅ Fertig | 6 Proben, Negativtest nachgewiesen |
+| **Falsification Gate** | ✅ Stabil | 6 Proben, Negativtest nachgewiesen, Legacy + Modern API |
+| **Evidence Layer** | ✅ Stabil | Claim/Evidence/ConfidenceResolver, 5 Evidenztypen, Status-Resolver |
 | **Needs Engine** | ✅ Fertig | 5 Detektoren, Lifecycle detected → resolved \| escalated |
 | **Learning Engine** | ✅ Fertig | PatternLearner + RewardModel + TrainingLoop |
 | **Self-Improvement** | ✅ Fertig | Nur durch validierten Reward-Score, Safety-Stop bei degrading trend |
-| **Knowledge Graph** | ✅ Fertig | Schema v3, Relations-API, CLI, Graph-Traversal |
+| **Knowledge Graph** | 🟡 Partiell | Schema v3, Relations-API, CLI, Graph-Traversal — Evidence-Binding fehlt |
 
-**Teststand:** 27 Tests, 0 Fehler, 0 Warnungen.
+**Teststand:** 36 Tests, 0 Fehler, 0 Warnungen.
 
 ---
 
@@ -135,16 +136,72 @@ Safety-Stop: Reward 3× < 0.20 → CRITICAL Need, Loop stoppt.
 
 ## Offene Baustellen
 
-| # | Baustein | Nächster Schritt |
-|---|---|---|
-| 1 | **Scheduler** | Cron-Dispatcher für `run_cycle()` |
-| 2 | **Planner** | Needs → konkrete LLM-Tasks |
-| 3 | **Graph-Populierung** | Auto-Scan von Repo-Struktur |
-| 4 | **Human-Review Queue** | Tabelle + CLI für Skill-Änderungen |
-| 5 | **Cross-Projekt-Lernen** | Pattern-Transfer zwischen Projekten |
+| # | Baustein | Status | Nächster Schritt |
+|---|---|---|---|
+| 1 | **Claim Resolver** | 🔜 | Claim → Evidence → Status (UNVERIFIED/SUPPORTED/CONFIRMED/CONFLICTED) |
+| 2 | **Graph-Populierung** | 🔜 | Evidence-backed Edges: Claim → Claim mit Evidence-IDs + Confidence |
+| 3 | **Human-Review Queue** | 🔜 | Tabelle + CLI für konfliktierte Claims |
+| 4 | **Scheduler** | 🔜 | Cron-Dispatcher für `run_cycle()` |
+| 5 | **Cross-Projekt-Lernen** | 🔜 | Pattern-Transfer nur nach Claim-Resolver + Provenance |
 
-> Erweiterungen erst nach nachgewiesener Stabilität des Kerns.
+> Reihenfolge: Evidence → Graph → Review → Scheduler → Cross-Project.
+> Der Graph darf kein Orakel werden. predecessoren müssen zuerst stehen.
 
 ---
 
-*Stand: 2026-07-17 — 27 Tests grün*
+## Evidence Layer — Status: STABLE (v0.4.0)
+
+Der Evidence Layer trennt Behauptungen (Claims) von messbarer Realität (Evidence).
+
+```
+Claim
+ ├── statement  (Was wird behauptet?)
+ ├── domain     (Welcher Bereich?)
+ ├── evidences  (Was beweist es?)
+ │    ├── type       (SOURCE | RUNTIME | TEST | REPLAY | HUMAN)
+ │    ├── confidence  (0.0 – 1.0)
+ │    ├── source      (Herkunft)
+ │    └── timestamp
+ └── status     (UNVERIFIED → SUPPORTED → CONFIRMED | CONFLICTED)
+```
+
+Ein gespeicherter Fakt besitzt nicht automatisch Wahrheit. Er besitzt nur Aussage,
+Herkunft, Evidenztyp, Confidence und Zeitbezug. Status wird vom ConfidenceResolver
+aus den Evidenzen abgeleitet — nicht behauptet.
+
+Confidence-Limits pro Typ: SOURCE 0.4, RUNTIME 0.9, TEST 0.7, REPLAY 0.95, HUMAN 1.0.
+
+---
+
+## Falsification Gate — Status: STABLE (v0.4.0)
+
+Das Gate fungiert nicht mehr ausschließlich als Validator. Es ist ein Evidence Producer:
+
+```
+Probe → FalsificationResult → Evidence Producer → Claim Resolver
+```
+
+Unterstützte Probe-Modi:
+1. **Modern API** — `FalsificationProbe(name, domain, severity, execute_fn)` mit `FalsificationResult` (8-arg)
+2. **Legacy API** — `FalsificationResult(name, passed, evidence_str)` (3-arg, auto-mapped)
+
+Der Compatibility Layer ist bewusst Teil des Framework-Vertrags. Entfernen bricht externe Plugins.
+
+---
+
+## Knowledge Graph — Status: PARTIAL (v0.4.0)
+
+```
+Graph Storage       ✓  Schema v3, SQLite-Backed
+Graph Edges         ✓  Relations-API, CLI, Traversal
+Data Robustheit     ✓  Dicts + Arrays + Skalare als Fact-Werte
+Evidence Binding    ✗  Edges ohne Evidence-IDs oder Confidence
+Claim Resolution    ✗  Graph kennt Beziehungen, nicht deren Begründung
+Semantic Traversal  ✗  Traversal kennt Claim-Status nicht
+```
+
+Der Graph darf nicht sagen "diese Claims sind wahr", sondern nur "diese Claims hängen zusammen, und das ist die Evidenz dafür."
+
+---
+
+*Stand: 2026-07-17 — 36 Tests grün, Evidence Layer stabil, Knowledge Graph partiell*
