@@ -114,6 +114,43 @@ def test_structured_probe_registration():
         assert custom_probe_results[0].passed is True
 
 
+def test_legacy_probe_result_adapter():
+    """Verify that the legacy 3-arg FalsificationResult constructor still works.
+
+    This is critical infrastructure: external probes use the old API:
+        FalsificationResult(name, passed, evidence_str)
+    If someone removes the compat layer, this test breaks before any
+    downstream plugin silently fails.
+    """
+    from karma.core.falsification_gate import FalsificationResult
+    from karma.core.evidence import EvidenceType
+
+    # Legacy success
+    r_ok = FalsificationResult("old_probe", True, "legacy success")
+    assert r_ok.probe_name == "old_probe"
+    assert r_ok.passed is True
+    assert r_ok.executed is True
+    assert r_ok.evidence_strength > 0
+    assert r_ok.evidence_str == "legacy success"
+    assert r_ok.evidence == "legacy success"  # alias
+    assert r_ok.evidence_type == EvidenceType.RUNTIME
+
+    # Legacy failure
+    r_fail = FalsificationResult("old_probe", False, "legacy failure")
+    assert r_fail.passed is False
+    assert r_fail.evidence_strength == 0.0
+    assert r_fail.evidence_str == "legacy failure"
+
+    # Full API still works
+    r_full = FalsificationResult(
+        "modern_probe", "claim", EvidenceType.TEST, True, True, 0.7, "full api", {}
+    )
+    assert r_full.probe_name == "modern_probe"
+    assert r_full.claim_statement == "claim"
+    assert r_full.evidence_type == EvidenceType.TEST
+    assert r_full.evidence_strength == 0.7
+
+
 def test_warning_severity_does_not_fail_gate():
     """Verify that a failing probe with severity='warning' does not fail the gate."""
     from karma.core.falsification_gate import FalsificationGate, FalsificationProbe, FalsificationResult
