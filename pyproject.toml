@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "LLM Middleware Runtime - Agent-agnostic context orchestration for any project"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "pyyaml>=6.0",
     "click>=8.1",
@@ -38,8 +38,6 @@ packages = [
     "karma.skills",
     "karma.ml",
     "karma.bus",
-    "karma.agents",
-    "karma.plugins",
 ]
 
 [tool.ruff]

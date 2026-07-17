@@ -94,6 +94,9 @@ class RewardModel:
     This allows the system to eventually learn better weights through meta-learning.
     """
 
+    # POLICY v0: Hardcoded fallback defaults until the L3 governance layer (Policy Engine) 
+    # is implemented. These weights serve as the initial foundation but contradict the 
+    # "No hardcoded thresholds" manifest rule in the long-term vision.
     DEFAULT_WEIGHTS = {
         "outcome":    0.40,   # Most important: did the task succeed?
         "gate":       0.25,   # Second: did it pass verification?
@@ -109,7 +112,7 @@ class RewardModel:
         "failure": 0.0,
     }
 
-    # Duration thresholds (seconds) for efficiency scoring
+    # POLICY v0: Hardcoded duration thresholds (seconds) for efficiency scoring
     FAST_THRESHOLD  = 5.0
     SLOW_THRESHOLD  = 120.0
 
