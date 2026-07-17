@@ -1,8 +1,9 @@
 import pytest
-from karma.orchestrator import MemoryCore
+from karma.core.persistence import PersistenceLayer, PersistenceConfig
+from pathlib import Path
 
 def test_orchestrator_initialization(tmp_path):
-    # Just a basic test to ensure the Orchestrator (L1) can be initialized
-    # or that MemoryCore which it heavily relies on works.
-    core = MemoryCore(str(tmp_path / "test_proj.db"))
+    # Just a basic test to ensure the PersistenceLayer works.
+    config = PersistenceConfig(framework_dir=Path(tmp_path))
+    core = PersistenceLayer(config)
     assert core is not None

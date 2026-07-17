@@ -14,7 +14,7 @@ class TestMemoryBus(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp(prefix="syxcraft_memory_bus_test_")
         os.environ["LLM_MIDDLEWARE_ROOT"] = self.tmpdir
-        from karma.runtime import memory_bus
+        from karma.experimental_runtime import memory_bus
         importlib.reload(memory_bus)
         self.memory_bus = memory_bus
 
