@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SyxCraft V71 Framework — /team Unified Orchestrator
+KARMA Framework — /team Unified Orchestrator
 
 Single entry point for the /team command. Dynamically discovers skills,
 loads/unloads them, queries domain memory, and dispatches work to the
