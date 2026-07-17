@@ -1,0 +1,130 @@
+{
+  "_meta": {
+    "description": "Registry of known agent platforms and their skill/rule formats. Used by migrate_skills.py to export framework skills into platform-native formats.",
+    "version": "1.0.0",
+    "last_updated": "2026-07-16"
+  },
+  "agents": {
+    "hermes": {
+      "name": "Hermes (Freebuff)",
+      "skill_format": "SKILL.md",
+      "skill_location": "~/.hermes/skills/<name>/SKILL.md",
+      "frontmatter": "yaml",
+      "frontmatter_delimiter": "---",
+      "required_fields": ["name", "description", "version"],
+      "optional_fields": ["author", "license", "metadata"],
+      "memory_format": "json",
+      "memory_location": "~/.hermes/syxcraft/",
+      "context_injection": "skill content loaded into prompt",
+      "command_prefix": "/",
+      "notes": "Current platform. Skills are SKILL.md files with YAML frontmatter. Memory bus is separate JSON store."
+    },
+    "claude": {
+      "name": "Claude Code (Anthropic)",
+      "skill_format": "markdown",
+      "skill_location": ".claude/skills/<name>/SKILL.md",
+      "frontmatter": "yaml",
+      "frontmatter_delimiter": "---",
+      "required_fields": ["name", "description"],
+      "optional_fields": ["version", "author"],
+      "memory_format": "markdown",
+      "memory_location": ".claude/skills/<name>/memory/",
+      "context_injection": "CLAUDE.md at project root + skill files loaded on demand",
+      "command_prefix": "/",
+      "notes": "Claude Code uses CLAUDE.md as project-level instructions. Skills can be in .claude/skills/ with SKILL.md files. Memory is markdown files in skill subdirectories."
+    },
+    "opencode": {
+      "name": "OpenCode",
+      "skill_format": "markdown",
+      "skill_location": ".opencode/rules/<name>.md",
+      "frontmatter": "none",
+      "frontmatter_delimiter": null,
+      "required_fields": ["title"],
+      "optional_fields": [],
+      "memory_format": "json",
+      "memory_location": ".opencode/memory/",
+      "context_injection": "rules loaded from .opencode/rules/ directory",
+      "command_prefix": "",
+      "notes": "OpenCode uses rule files in .opencode/rules/. Each rule is a standalone markdown file. No YAML frontmatter required. Memory can be stored in .opencode/memory/."
+    },
+    "cursor": {
+      "name": "Cursor",
+      "skill_format": "markdown",
+      "skill_location": ".cursor/rules/<name>.mdc",
+      "frontmatter": "custom",
+      "frontmatter_delimiter": "---",
+      "required_fields": ["description"],
+      "optional_fields": ["globs", "alwaysApply"],
+      "memory_format": "markdown",
+      "memory_location": ".cursor/memory/",
+      "context_injection": "rules in .cursor/rules/ auto-applied based on glob patterns",
+      "command_prefix": "",
+      "notes": "Cursor uses .mdc files in .cursor/rules/ with custom frontmatter including glob patterns for conditional application. Memory via markdown files."
+    },
+    "windsurf": {
+      "name": "Windsurf (Codeium)",
+      "skill_format": "markdown",
+      "skill_location": ".windsurf/rules/<name>.md",
+      "frontmatter": "yaml",
+      "frontmatter_delimiter": "---",
+      "required_fields": ["name", "description"],
+      "optional_fields": ["globs", "alwaysApply"],
+      "memory_format": "markdown",
+      "memory_location": ".windsurf/memory/",
+      "context_injection": "rules in .windsurf/rules/ auto-applied",
+      "command_prefix": "",
+      "notes": "Windsurf uses markdown rules in .windsurf/rules/. Similar to Cursor but with YAML frontmatter."
+    },
+    "copilot": {
+      "name": "GitHub Copilot",
+      "skill_format": "markdown",
+      "skill_location": ".github/copilot-instructions.md",
+      "frontmatter": "none",
+      "frontmatter_delimiter": null,
+      "required_fields": [],
+      "optional_fields": [],
+      "memory_format": "markdown",
+      "memory_location": ".github/copilot-memory/",
+      "context_injection": "single instructions file at .github/copilot-instructions.md",
+      "command_prefix": "",
+      "notes": "Copilot uses a single .github/copilot-instructions.md file. No per-skill structure. All rules in one file. Memory via separate markdown files."
+    }
+  },
+  "format_mapping": {
+    "skill_to_platform": {
+      "hermes": {
+        "file_pattern": "SKILL.md",
+        "frontmatter": true,
+        "description_field": "description",
+        "name_field": "name",
+        "tags_field": "metadata.tags"
+      },
+      "claude": {
+        "file_pattern": "SKILL.md",
+        "frontmatter": true,
+        "description_field": "description",
+        "name_field": "name",
+        "tags_field": "metadata.tags"
+      },
+      "opencode": {
+        "file_pattern": "<name>.md",
+        "frontmatter": false,
+        "description_field": "title",
+        "name_field": null,
+        "tags_field": null,
+        "header_format": "# {name}\n\n{description}\n\n---\n\n{content}"
+      },
+      "cursor": {
+        "file_pattern": "<name>.mdc",
+        "frontmatter": true,
+        "description_field": "description",
+        "name_field": null,
+        "tags_field": null,
+        "extra_frontmatter": {
+          "globs": "**/*",
+          "alwaysApply": false
+        }
+      }
+    }
+  }
+}

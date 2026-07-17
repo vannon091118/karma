@@ -1,0 +1,174 @@
+{
+  "_meta": {
+    "description": "Single Source of Truth for all SyxCraft V71 domains. Every /team invocation reads this file ONCE.",
+    "version": "2.0.0",
+    "last_updated": "2026-07-16T00:00:00Z",
+    "schema_version": 2
+  },
+  "domains": {
+    "engine": {
+      "description": "Snake2D engine hooks, packages, version compat, SCRIPT interface",
+      "priority": 1,
+      "memory_keys": ["package_map", "hooks", "version_compat", "script_interface", "save_load_protocol"],
+      "knowledge": "domains/engine/knowledge/baseline.md",
+      "templates": "domains/engine/templates/",
+      "checklists": "domains/engine/checklists/",
+      "keywords": ["engine", "hook", "api", "snake2d", "script", "render", "core"],
+      "depends_on": [],
+      "cross_refs": ["reflection", "runtime", "assets"]
+    },
+    "runtime": {
+      "description": "Tick loop, game loop integration, delta timing, DEGRADED handling",
+      "priority": 2,
+      "memory_keys": ["tick_loop", "save_load_protocol", "degraded_handling", "update_cycle"],
+      "knowledge": "domains/runtime/knowledge/baseline.md",
+      "templates": "domains/runtime/templates/",
+      "checklists": "domains/runtime/checklists/",
+      "keywords": ["runtime", "tick", "loop", "update", "delta", "game-loop"],
+      "depends_on": ["engine"],
+      "cross_refs": ["engine", "performance", "save"]
+    },
+    "save": {
+      "description": "FilePutter/FileGetter serialization, save versioning, migrations",
+      "priority": 3,
+      "memory_keys": ["save_format", "migration_v1_to_v4", "state_objects", "version_header"],
+      "knowledge": "domains/save/knowledge/baseline.md",
+      "templates": "domains/save/templates/",
+      "checklists": "domains/save/checklists/",
+      "keywords": ["save", "load", "serialize", "persist", "migration", "fileputter", "filegetter"],
+      "depends_on": ["engine"],
+      "cross_refs": ["runtime", "reflection"]
+    },
+    "reflection": {
+      "description": "ReflectionUtil API, version detection, fallback chains, DEGRADED tracker",
+      "priority": 3,
+      "memory_keys": ["access_map", "fallback_chains", "degraded_tracker", "reflection_util_api"],
+      "knowledge": "domains/reflection/knowledge/baseline.md",
+      "templates": "domains/reflection/templates/",
+      "checklists": "domains/reflection/checklists/",
+      "keywords": ["reflection", "safe", "degraded", "fallback", "invoke", "field"],
+      "depends_on": ["engine"],
+      "cross_refs": ["engine", "runtime"]
+    },
+    "assets": {
+      "description": "V71 sprite format (13 PNGs), textures, animations, icon system",
+      "priority": 4,
+      "memory_keys": ["sprite_format", "animation_spec", "icon_system", "v71_png_pipeline"],
+      "knowledge": "domains/assets/knowledge/baseline.md",
+      "templates": "domains/assets/templates/",
+      "checklists": "domains/assets/checklists/",
+      "keywords": ["asset", "sprite", "texture", "png", "icon", "portrait", "animation"],
+      "depends_on": ["engine"],
+      "cross_refs": ["engine"]
+    },
+    "performance": {
+      "description": "Tick budget, GC tuning, JVM flags, profiling",
+      "priority": 5,
+      "memory_keys": ["tick_budget", "gc_tuning", "jvm_flags", "profiling_guide"],
+      "knowledge": "domains/performance/knowledge/baseline.md",
+      "templates": "domains/performance/templates/",
+      "checklists": "domains/performance/checklists/",
+      "keywords": ["performance", "gc", "jvm", "profil", "benchmark", "latency"],
+      "depends_on": ["runtime"],
+      "cross_refs": ["runtime", "engine"]
+    },
+    "documentation": {
+      "description": "ADR, SSOT, CHANGELOG, cross-reference registry",
+      "priority": 6,
+      "memory_keys": ["adr_index", "ssot_status", "changelog", "cross_references"],
+      "knowledge": "domains/documentation/knowledge/baseline.md",
+      "templates": "domains/documentation/templates/",
+      "checklists": "domains/documentation/checklists/",
+      "keywords": ["doc", "adr", "changelog", "ssot", "readme", "reference"],
+      "depends_on": [],
+      "cross_refs": ["release"]
+    },
+    "release": {
+      "description": "Versioning, CI/CD, packaging, Steam Workshop upload",
+      "priority": 7,
+      "memory_keys": ["version", "ci_config", "packaging", "workshop_upload"],
+      "knowledge": "domains/release/knowledge/baseline.md",
+      "templates": "domains/release/templates/",
+      "checklists": "domains/release/checklists/",
+      "keywords": ["release", "version", "ci", "cd", "package", "workshop", "steam"],
+      "depends_on": ["documentation"],
+      "cross_refs": ["documentation", "assets"]
+    },
+    "settlement": {
+      "description": "Population API, room creation, economy, race configs, immigration",
+      "priority": 4,
+      "memory_keys": ["population_api", "room_creation", "race_configs", "economy_flows"],
+      "knowledge": "domains/settlement/knowledge/baseline.md",
+      "templates": "domains/settlement/templates/",
+      "checklists": "domains/settlement/checklists/",
+      "keywords": ["settlement", "population", "room", "economy", "race", "citizen", "immigration"],
+      "depends_on": ["engine", "reflection"],
+      "cross_refs": ["runtime", "ui", "world"]
+    },
+    "ui": {
+      "description": "GuiSection, debug panels, text injection (¤¤ + D.ts()), player-facing strings",
+      "priority": 5,
+      "memory_keys": ["gui_section", "debug_panel", "text_injection", "player_strings"],
+      "knowledge": "domains/ui/knowledge/baseline.md",
+      "templates": "domains/ui/templates/",
+      "checklists": "domains/ui/checklists/",
+      "keywords": ["ui", "gui", "debug", "panel", "text", "injection", "player"],
+      "depends_on": ["engine"],
+      "cross_refs": ["engine", "settlement"]
+    },
+    "world": {
+      "description": "World map, NPC factions, diplomacy, trade routes, events",
+      "priority": 5,
+      "memory_keys": ["world_api", "faction_npc", "diplomacy", "trade_routes"],
+      "knowledge": "domains/world/knowledge/baseline.md",
+      "templates": "domains/world/templates/",
+      "checklists": "domains/world/checklists/",
+      "keywords": ["world", "faction", "diplomacy", "trade", "npc", "map", "event"],
+      "depends_on": ["engine", "reflection"],
+      "cross_refs": ["settlement", "runtime"]
+    },
+    "research": {
+      "description": "External research, online docs, mod SDK analysis, feasibility studies",
+      "priority": 8,
+      "memory_keys": ["research_index", "sdk_analysis", "feasibility_studies"],
+      "knowledge": "domains/research/knowledge/baseline.md",
+      "templates": "domains/research/templates/",
+      "checklists": "domains/research/checklists/",
+      "keywords": ["research", "docs", "sdk", "feasibility", "external", "online"],
+      "depends_on": [],
+      "cross_refs": ["documentation", "engine"]
+    }
+  },
+  "skill_groups": {
+    "pipeline": {
+      "description": "4-phase pipeline: dump-analyse → konzept → execution → tests",
+      "skills": ["dump-analyse", "konzept", "execution", "tests", "workflow", "loop"],
+      "load_order": ["workflow", "dump-analyse", "konzept", "execution", "tests", "loop"]
+    },
+    "quality": {
+      "description": "Code quality, validation, cleanup, audit",
+      "skills": ["fullscan", "repo-clean", "ssot-audit", "tree-valid", "simplify-code", "requesting-code-review"],
+      "load_order": ["fullscan", "ssot-audit", "tree-valid", "repo-clean", "simplify-code", "requesting-code-review"]
+    },
+    "falsifizierung": {
+      "description": "Anti-confirm-bias falsification skills",
+      "skills": ["repo-clean-falsifizierung", "ssot-audit-falsifizierung", "tree-valid-falsifizierung"],
+      "load_order": ["repo-clean-falsifizierung", "ssot-audit-falsifizierung", "tree-valid-falsifizierung"]
+    },
+    "syxcraft": {
+      "description": "SyxCraft modding-specific skills",
+      "skills": ["syxcraft-modding", "syxcraft-engine-chain", "syxcraft-kernel-framework", "syxcraft-asset-generator", "syxcraft-asset-generator-auto", "game-modding-research", "game-modding-analysis"],
+      "load_order": ["game-modding-research", "game-modding-analysis", "syxcraft-engine-chain", "syxcraft-kernel-framework", "syxcraft-modding", "syxcraft-asset-generator", "syxcraft-asset-generator-auto"]
+    },
+    "infrastructure": {
+      "description": "Dev environment, debugging, protocols",
+      "skills": ["dev-environment-setup", "python-debugpy", "node-inspect-debugger", "hermes-agent-skill-authoring", "hermes-plugin-shell-to-python-hooks", "workspace-skill-discovery"],
+      "load_order": ["dev-environment-setup", "python-debugpy", "node-inspect-debugger", "hermes-agent-skill-authoring", "hermes-plugin-shell-to-python-hooks", "workspace-skill-discovery"]
+    },
+    "meta": {
+      "description": "Framework meta-skills: hooks, memory, personality",
+      "skills": ["hooks", "plan", "protocols", "deterministic-tdd", "test-driven-development"],
+      "load_order": ["protocols", "hooks", "plan", "deterministic-tdd", "test-driven-development"]
+    }
+  }
+}

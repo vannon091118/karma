@@ -1,0 +1,46 @@
+# LLM Middleware Runtime
+
+Agent-agnostic context orchestration for any project.
+
+Stays *between* you (human) or your agents (Claude, Hermes, OpenCode,
+Cursor, Windsurf, Copilot) and the language models. Persistent per-project
+memory, automatic skill selection, and a falsification gate that verifies
+every result before it is trusted.
+
+## Install
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ./llm_middleware
+llm-mw --help
+```
+
+## Quick start
+
+```bash
+cd /path/to/your-project
+llm-mw init          # creates .llm-mw/ (index, inventory, scopes, CLAUDE.md)
+# or, guided:
+llm-mw onboard         # interactive wizard for humans new to the middleware
+```
+
+Then daily:
+
+```bash
+llm-mw status --project your-project
+llm-mw memory get engine version_compat
+llm-mw memory set ui '{"theme":"dark"}'
+llm-mw skill list
+llm-mw dispatch "build the UI menu" --project your-project
+llm-mw prompt generate --platform claude
+```
+
+## Concepts
+
+- **Projects** are isolated — each has its own memory, never mixed.
+- **Domains** are knowledge areas (engine, runtime, ui, world, …),
+  defined once in `domains/MANIFEST.json` (SSOT).
+- **Skills** are reusable agent instructions, mapped to domains.
+- **Falsification** tests every result before it is trusted.
+
+See `ONBOARDING.md` (repo root) for the full human guide.

@@ -1,0 +1,50 @@
+# Editor / backup artefacts
+*.bak
+*.backup
+*.backup[0-9]*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Runtime data (local DBs, project state)
+.llm-mw/
+*.db
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Claude / AI tooling (local only)
+.claude/
+.opencode/
+trash/
+fix_indent.py

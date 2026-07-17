@@ -1,0 +1,42 @@
+{
+  "template": "full-pipeline",
+  "description": "Standard 4-phase: dump-analyse → konzept → execution → tests",
+  "status": "in_progress",
+  "started_at": "2026-07-16T19:14:44.678149+00:00",
+  "steps": {
+    "analyze": {
+      "status": "ready",
+      "skill": "dump-analyse",
+      "depends_on": [],
+      "output_path": null,
+      "completed_at": null
+    },
+    "design": {
+      "status": "pending",
+      "skill": "konzept",
+      "depends_on": [
+        "analyze"
+      ],
+      "output_path": null,
+      "completed_at": null
+    },
+    "execute": {
+      "status": "pending",
+      "skill": "execution",
+      "depends_on": [
+        "design"
+      ],
+      "output_path": null,
+      "completed_at": null
+    },
+    "verify": {
+      "status": "pending",
+      "skill": "tests",
+      "depends_on": [
+        "execute"
+      ],
+      "output_path": null,
+      "completed_at": null
+    }
+  }
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "agent": "ctl",
+    "domain": "release",
+    "task": "dispatch:workflow",
+    "outcome": "success",
+    "evidence": "12 skills selected, 4935 chars prompt",
+    "timestamp": "2026-07-16T19:14:44.788850+00:00",
+    "project": "syxcraft"
+  }
+]
