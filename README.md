@@ -11,7 +11,7 @@
 ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
 ```
 
-**Kernel for Autonomous Runtime Memory Architecture**  
+**Knowledge-Aware Runtime Memory Architecture**  
 A learning system that falsifies its own outputs before it calls anything "done."
 
 <br/>
