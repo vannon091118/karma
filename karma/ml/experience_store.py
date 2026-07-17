@@ -56,9 +56,10 @@ class Experience:
 class ExperienceStore:
     def __init__(self, persistence: PersistenceLayer):
         self.persistence = persistence
-        self._ensure_schema()
+        self.persistence.ensure_schema("experience_store", self._create_schema)
 
-    def _ensure_schema(self) -> None:
+    def _create_schema(self) -> None:
+        """DDL only — called at most once per PersistenceLayer instance."""
         self.persistence.execute("""
             CREATE TABLE IF NOT EXISTS experiences (
                 id TEXT PRIMARY KEY,
@@ -85,7 +86,10 @@ class ExperienceStore:
         """)
         self.persistence.execute("CREATE INDEX IF NOT EXISTS idx_experiences_execution ON experiences(execution_id)")
         self.persistence.execute("CREATE INDEX IF NOT EXISTS idx_experiences_project ON experiences(project)")
-        self.persistence.manager.get_connection().commit()
+        self.persistence.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_experiences_unique_request "
+            "ON experiences(project, request_id)"
+        )
 
     def record(self, exp: Experience) -> None:
         """Insert a new immutable experience."""

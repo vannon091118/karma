@@ -19,8 +19,8 @@ from typing import Any, Dict, List, Optional
 
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
 
-from karma.runtime import memory_core, context_optimizer
-from karma.runtime import skill_registry as _skill_registry
+from karma.experimental_runtime import memory_core, context_optimizer
+from karma.experimental_runtime import skill_registry as _skill_registry
 
 FORMATS_PATH = FRAMEWORK_ROOT / "middleware" / "AGENT_FORMATS.json"
 

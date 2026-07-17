@@ -94,17 +94,26 @@ class GateFailure(Exception):
 
 
 def handle_turn(persistence: PersistenceLayer, req: TurnRequest) -> TurnResult:
+    """Ein kompletter Agenten-Turn.
+
+    Idempotenz-Strategie:
+        Der Check und alle nachfolgenden Writes laufen innerhalb DERSELBEN
+        BEGIN IMMEDIATE-Transaktion. Das verhindert den TOCTOU-Fensterspalt,
+        bei dem zwei Threads gleichzeitig check_idempotency() == None sehen
+        und dann beide schreiben.
+
+        Ablauf:
+            1. BEGIN IMMEDIATE  ← schließt alle anderen Writer aus
+            2. check_idempotency (innerhalb Tx)
+            3. wenn Cache-Hit: ROLLBACK (kein Schreiben), Return cached
+            4. sonst: Gate, Experience, Reward, KG, store_idempotency, COMMIT
+    """
     bus = get_global_bus()
     idem_key = f"turn:{req.project}:{req.request_id}"
 
-    cached = persistence.check_idempotency(idem_key)
-    if cached is not None:
-        result = TurnResult(**cached)
-        result.idempotent_replay = True
-        return result
-
     policy = PolicyResolver(persistence, req.project).resolve()
 
+    # ─── Gate (außerhalb Tx – ist CPU/IO-bound, kein DB-Write) ──────────
     try:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".md", delete=False, encoding="utf-8"
@@ -125,75 +134,84 @@ def handle_turn(persistence: PersistenceLayer, req: TurnRequest) -> TurnResult:
 
     probes_dict = [r.to_dict() for r in probe_results]
 
-    bus.publish_persisted(
-        Event(
-            type=EventType.GATE_PASSED if gate_passed else EventType.GATE_FAILED,
-            project=req.project,
-            payload={"task": req.task, "probes": probes_dict},
-            source="turn_kernel",
-        ),
-        persistence,
-    )
+    with persistence.transaction() as _conn:
+        # ─── Idempotenz-Check inside the exclusive lock ──────────────────
+        cached = persistence.check_idempotency(idem_key)
+        if cached is not None:
+            result = TurnResult(**cached)
+            result.idempotent_replay = True
+            return result
 
-    # ─── Experience (unveränderlich) ───────────────────────────────────
-    # FIX: Auch Gate-Fails als Experience protokollieren!
-    exp = Experience(
-        project=req.project,
-        request_id=req.request_id,
-        task=req.task,
-        gate_passed=gate_passed,
-        reward_model_version=policy.reward_model_version,
-        gate_version=policy.gate_version,
-        context_snapshot_id=req.context_snapshot_id,
-    )
-    ExperienceStore(persistence).record(exp)
+        bus.publish_persisted(
+            Event(
+                type=EventType.GATE_PASSED if gate_passed else EventType.GATE_FAILED,
+                project=req.project,
+                payload={"task": req.task, "probes": probes_dict},
+                source="turn_kernel",
+            ),
+            persistence,
+        )
 
-    # ─── Reward ─────────────────────────────────────────────────────────
-    reward_model = RewardModel(persistence, req.project)
-    breakdown = reward_model.score(
-        RewardSignal(
+        # ─── Experience (unveränderlich) ───────────────────────────────────
+        # FIX: Auch Gate-Fails als Experience protokollieren!
+        exp = Experience(
             project=req.project,
+            request_id=req.request_id,
             task=req.task,
-            outcome=req.outcome,
             gate_passed=gate_passed,
-            skill_name=req.skill_name,
-            correlation_id=req.request_id,
-            user_feedback=req.user_feedback,
+            failure_type=None if gate_passed else "falsification_failed",
+            reward_model_version=policy.reward_model_version,
+            gate_version=policy.gate_version,
+            context_snapshot_id=req.context_snapshot_id or "",
         )
-    )
-    
-    bus.publish(
-        Event(
-            type=EventType.REWARD_SCORED,
-            project=req.project,
-            payload={"experience_id": exp.id, "reward": breakdown.final},
-            source="turn_kernel",
+        ExperienceStore(persistence).record(exp)
+
+        # ─── Reward ─────────────────────────────────────────────────────────
+        reward_model = RewardModel(persistence, req.project)
+        breakdown = reward_model.score(
+            RewardSignal(
+                project=req.project,
+                task=req.task,
+                outcome=req.outcome,
+                gate_passed=gate_passed,
+                skill_name=req.skill_name,
+                correlation_id=req.request_id,
+                user_feedback=req.user_feedback,
+            )
         )
-    )
+        
+        bus.publish(
+            Event(
+                type=EventType.REWARD_SCORED,
+                project=req.project,
+                payload={"experience_id": exp.id, "reward": breakdown.final},
+                source="turn_kernel",
+            )
+        )
 
-    # ─── Knowledge Graph ────────────────────────────────────────────────
-    kg = KnowledgeGraph(persistence, project=req.project)
-    kg.update_from_experience(exp.id, breakdown.final)
-    kg_updated = bool(exp.context_snapshot_id)
-    
-    bus.publish_persisted(
-        Event(
-            type=EventType.KNOWLEDGE_DISTILLED,
-            project=req.project,
-            payload={"experience_id": exp.id, "task": req.task, "kg_updated": kg_updated},
-            source="turn_kernel",
-        ),
-        persistence,
-    )
+        # ─── Knowledge Graph ────────────────────────────────────────────────
+        kg = KnowledgeGraph(persistence, project=req.project)
+        kg.update_from_experience(exp.id, breakdown.final)
+        kg_updated = bool(exp.context_snapshot_id)
+        
+        bus.publish_persisted(
+            Event(
+                type=EventType.KNOWLEDGE_DISTILLED,
+                project=req.project,
+                payload={"experience_id": exp.id, "task": req.task, "kg_updated": kg_updated},
+                source="turn_kernel",
+            ),
+            persistence,
+        )
 
-    result = TurnResult(
-        gate_passed=gate_passed,
-        probes=probes_dict,
-        experience_id=exp.id,
-        reward=breakdown.final,
-    )
-    
-    persistence.store_idempotency(
-        key=idem_key, project=req.project, operation="turn", result=result.to_dict()
-    )
+        result = TurnResult(
+            gate_passed=gate_passed,
+            probes=probes_dict,
+            experience_id=exp.id,
+            reward=breakdown.final,
+        )
+        
+        persistence.store_idempotency(
+            key=idem_key, project=req.project, operation="turn", result=result.to_dict()
+        )
     return result

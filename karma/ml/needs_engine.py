@@ -118,13 +118,13 @@ class NeedsEngine:
     # Cache miss rate threshold
     CACHE_MISS_THRESHOLD = 0.6
 
-    def __init__(self, persistence: PersistenceLayer, project: str) -> None:
+    def __init__(self, persistence: PersistenceLayer, project: str = "") -> None:
         self.persistence = persistence
         self.project = project
-        self._ensure_schema()
+        self.persistence.ensure_schema("needs_engine", self._create_schema)
 
-    def _ensure_schema(self) -> None:
-        """Create needs table if it doesn't exist (schema extension v3)."""
+    def _create_schema(self) -> None:
+        """DDL only — called at most once per PersistenceLayer instance."""
         self.persistence.execute("""
             CREATE TABLE IF NOT EXISTS needs (
                 need_id   TEXT PRIMARY KEY,
@@ -146,7 +146,6 @@ class NeedsEngine:
         self.persistence.execute(
             "CREATE INDEX IF NOT EXISTS idx_needs_priority ON needs(priority, status)"
         )
-        self.persistence.manager.get_connection().commit()
 
     # ─── Public API ───────────────────────────────────────────────────────
 

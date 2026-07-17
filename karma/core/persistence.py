@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 
 # ─── Schema Version ────────────────────────────────────────────────────────
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 SCHEMA_VERSION_PRAGMA = "user_version"
 
 # ─── Connection Manager ────────────────────────────────────────────────────
@@ -39,6 +39,7 @@ class SQLiteConnectionManager:
             str(self.db_path),
             timeout=30.0,
             check_same_thread=False,
+            isolation_level=None,   # autocommit — we manage all transactions explicitly
         )
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
@@ -60,16 +61,19 @@ class SQLiteConnectionManager:
     def _initialize_schema(self, conn: sqlite3.Connection) -> None:
         """Create tables and run migrations."""
         current_version = conn.execute(f"PRAGMA {SCHEMA_VERSION_PRAGMA}").fetchone()[0]
-        
+
         if current_version == 0:
             self._create_schema_v1(conn)
             current_version = 1
-        
+
         if current_version < CURRENT_SCHEMA_VERSION:
             self._run_migrations(conn, current_version)
-        
+
+        # PRAGMA user_version is not transactional but needs explicit commit
+        # when isolation_level=None (autocommit mode).
+        conn.execute("BEGIN IMMEDIATE")
         conn.execute(f"PRAGMA {SCHEMA_VERSION_PRAGMA} = {CURRENT_SCHEMA_VERSION}")
-        conn.commit()
+        conn.execute("COMMIT")
     
     def _create_schema_v1(self, conn: sqlite3.Connection) -> None:
         """Initial schema creation."""
@@ -186,6 +190,7 @@ class SQLiteConnectionManager:
         migrations = {
             1: self._migrate_v1_to_v2,
             2: self._migrate_v2_to_v3,
+            3: self._migrate_v3_to_v4,
         }
         
         for version in range(from_version, CURRENT_SCHEMA_VERSION):
@@ -194,18 +199,16 @@ class SQLiteConnectionManager:
     
     def _migrate_v1_to_v2(self, conn: sqlite3.Connection) -> None:
         """Add cascade_state.metadata if missing, add events table."""
-        # Check if cascade_state has metadata column
         cols = conn.execute("PRAGMA table_info(cascade_state)").fetchall()
         col_names = [c[1] for c in cols]
-        
         if "metadata" not in col_names:
+            conn.execute("BEGIN IMMEDIATE")
             conn.execute("ALTER TABLE cascade_state ADD COLUMN metadata TEXT DEFAULT '{}'")
-        
-        # Events table added in v2 schema creation
-        conn.commit()
+            conn.execute("COMMIT")
 
     def _migrate_v2_to_v3(self, conn: sqlite3.Connection) -> None:
         """Create relations table for knowledge graph."""
+        # executescript() always issues COMMIT first, safe in autocommit mode
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS relations (
                 project TEXT NOT NULL,
@@ -221,7 +224,20 @@ class SQLiteConnectionManager:
             CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(project, source_type, source_id);
             CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(project, target_type, target_id);
         """)
-        conn.commit()
+
+    def _migrate_v3_to_v4(self, conn: sqlite3.Connection) -> None:
+        """Add UNIQUE constraint on experiences(project, request_id).
+
+        No-op on fresh DBs — ExperienceStore._ensure_schema() creates the
+        index when the table is first instantiated.
+        """
+        try:
+            conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_experiences_unique_request
+                ON experiences(project, request_id)
+            """)
+        except Exception:
+            pass  # table not yet created — ExperienceStore will add the index
     
     def close_all(self) -> None:
         with self._lock:
@@ -246,25 +262,94 @@ class PersistenceLayer:
     """
     Main persistence interface. All read/write operations go through here.
     Provides transactional boundaries and idempotency.
+
+    Schema lifecycle
+    ----------------
+    Modules MUST NOT run DDL in their ``__init__``.  Instead they call::
+
+        self.persistence.ensure_schema("my_module", self._create_schema)
+
+    The registry guarantees the callable runs exactly once per
+    ``PersistenceLayer`` instance — a set lookup on every subsequent call.
+    Call ``persistence.ensure_all_schemas()`` once at startup to pre-warm
+    every known schema before the first ``handle_turn()``.
     """
-    
+
     def __init__(self, config: PersistenceConfig):
         self.config = config
         self.config.framework_dir.mkdir(parents=True, exist_ok=True)
         self.manager = SQLiteConnectionManager(config.db_path)
+        # Registry: schema keys that have already been initialised.
+        # Checked before every ensure_schema() call; a set lookup is O(1).
+        self._schemas_initialized: set[str] = set()
     
     @contextmanager
     def transaction(self):
-        """Context manager for explicit transactions."""
+        """Context manager for explicit IMMEDIATE transactions (supports nesting).
+
+        With isolation_level=None (autocommit), conn.commit() is a no-op.
+        We use explicit SQL BEGIN IMMEDIATE / COMMIT / ROLLBACK so the
+        locking semantics are unambiguous regardless of Python version.
+        """
         conn = self.manager.get_connection()
-        conn.execute("BEGIN IMMEDIATE")
+        in_tx = conn.in_transaction
+        if not in_tx:
+            conn.execute("BEGIN IMMEDIATE")
         try:
             yield conn
-            conn.commit()
+            if not in_tx:
+                conn.execute("COMMIT")
         except Exception:
-            conn.rollback()
+            if not in_tx:
+                try:
+                    conn.execute("ROLLBACK")
+                except Exception:
+                    pass
             raise
     
+    # ─── Schema Registry ─────────────────────────────────────────────────
+
+    def ensure_schema(self, schema_key: str, create_fn) -> None:
+        """Run ``create_fn`` exactly once per ``schema_key`` per instance.
+
+        Safe to call from ``__init__`` of any service class — subsequent
+        calls cost one ``in`` check on a Python ``set`` and return
+        immediately without touching SQLite.
+
+        ``create_fn`` must be a zero-argument callable that issues only
+        DDL (``CREATE TABLE / INDEX IF NOT EXISTS``).  It MUST NOT call
+        ``conn.commit()`` — the registry runs DDL directly on the
+        connection in autocommit mode, so every statement commits itself.
+        """
+        if schema_key in self._schemas_initialized:
+            return
+        create_fn()
+        self._schemas_initialized.add(schema_key)
+
+    def ensure_all_schemas(self) -> None:
+        """Pre-warm all known module schemas.
+
+        Call this once during application startup (CLI init, MCP server
+        startup, test fixtures) so that the first ``handle_turn()`` never
+        pays the DDL cost.  Idempotent — safe to call multiple times.
+        """
+        # Import here to avoid circular imports at module load time.
+        from karma.ml.experience_store import ExperienceStore
+        from karma.ml.knowledge_graph import KnowledgeGraph
+        from karma.ml.reward_model import RewardModel
+        from karma.ml.pattern_learner import PatternLearner
+        from karma.ml.needs_engine import NeedsEngine
+        from karma.core.context_snapshot import ContextSnapshotStore
+
+        ExperienceStore(self)      # registers "experience_store"
+        KnowledgeGraph(self, "")   # registers "knowledge_graph"
+        RewardModel(self, "")      # registers "reward_model"
+        PatternLearner(self, "")   # registers "pattern_learner"
+        NeedsEngine(self)          # registers "needs_engine"
+        ContextSnapshotStore(self) # registers "context_snapshot"
+
+    # ─── Query Execution ─────────────────────────────────────────────────
+
     def execute(self, query: str, params: tuple = ()) -> sqlite3.Cursor:
         """Execute a query within an implicit transaction."""
         conn = self.manager.get_connection()
@@ -821,16 +906,32 @@ def _migrate_legacy_skill_states(persistence: PersistenceLayer, project: str) ->
 
 # ─── Factory ──────────────────────────────────────────────────────────────
 
+_persistence_cache: Dict[str, PersistenceLayer] = {}
+_persistence_lock = threading.Lock()
+
 def create_persistence(framework_dir: Optional[Path | str] = None) -> PersistenceLayer:
     """Create persistence layer with default config."""
+    global _persistence_cache
     if framework_dir is None:
         framework_dir = os.environ.get(
             "LLM_MIDDLEWARE_ROOT",
             str(Path.home() / ".karma")
         )
-    config = PersistenceConfig(framework_dir=Path(framework_dir))
-    return PersistenceLayer(config)
+    fw_path = Path(framework_dir).resolve()
+    db_path = fw_path / "middleware.db"
+    cache_key = str(db_path)
+    
+    with _persistence_lock:
+        if cache_key not in _persistence_cache:
+            config = PersistenceConfig(framework_dir=fw_path)
+            persistence = PersistenceLayer(config)
+            persistence.ensure_all_schemas()
+            _persistence_cache[cache_key] = persistence
+        return _persistence_cache[cache_key]
 
+
+_project_persistence_cache: Dict[str, PersistenceLayer] = {}
+_project_persistence_lock = threading.Lock()
 
 def create_project_persistence(project: str = "default") -> PersistenceLayer:
     """Create a project-scoped persistence layer at projects/<project>.db.
@@ -838,6 +939,7 @@ def create_project_persistence(project: str = "default") -> PersistenceLayer:
     Single source of truth for per-project DB isolation — used by both the CLI
     and the orchestrator so the path convention never drifts.
     """
+    global _project_persistence_cache
     projects_dir = Path(
         os.environ.get(
             "LLM_MIDDLEWARE_ROOT",
@@ -845,5 +947,13 @@ def create_project_persistence(project: str = "default") -> PersistenceLayer:
         )
     ) / "projects"
     projects_dir.mkdir(parents=True, exist_ok=True)
-    config = PersistenceConfig(framework_dir=projects_dir, db_filename=f"{project}.db")
-    return PersistenceLayer(config)
+    db_path = projects_dir / f"{project}.db"
+    cache_key = str(db_path.resolve())
+    
+    with _project_persistence_lock:
+        if cache_key not in _project_persistence_cache:
+            config = PersistenceConfig(framework_dir=projects_dir, db_filename=f"{project}.db")
+            persistence = PersistenceLayer(config)
+            persistence.ensure_all_schemas()
+            _project_persistence_cache[cache_key] = persistence
+        return _project_persistence_cache[cache_key]

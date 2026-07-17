@@ -19,8 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from karma.runtime import memory_core
-from karma.runtime import skill_registry as _skill_registry_module
+from karma.experimental_runtime import memory_core
+from karma.experimental_runtime import skill_registry as _skill_registry_module
 
 # Lazy wrapper kept for API compatibility; now backed by the installed package
 def _get_skill_registry():
@@ -323,8 +323,8 @@ def complete_step(project: str, step_name: str, output_file: str) -> None:
     # --- ML FEEDBACK LOOP (Outcome Capture) ---
     from karma.core.persistence import create_persistence
     from karma.core.prompt_variant_store import PromptVariantStore
-    from karma.runtime.falsification_gate import FalsificationGate
-    from karma.runtime.outcome_middleware import LLMCallContext, capture_outcome
+    from karma.experimental_runtime.falsification_gate import FalsificationGate
+    from karma.experimental_runtime.outcome_middleware import LLMCallContext, capture_outcome
     import time
 
     p = create_persistence()

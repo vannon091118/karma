@@ -119,10 +119,11 @@ class RewardModel:
     def __init__(self, persistence: PersistenceLayer, project: str) -> None:
         self.persistence = persistence
         self.project = project
-        self._ensure_schema()
+        self.persistence.ensure_schema("reward_model", self._create_schema)
         self._weights = self._load_weights()
 
-    def _ensure_schema(self) -> None:
+    def _create_schema(self) -> None:
+        """DDL only — called at most once per PersistenceLayer instance."""
         self.persistence.execute("""
             CREATE TABLE IF NOT EXISTS rewards (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,7 +144,6 @@ class RewardModel:
         self.persistence.execute(
             "CREATE INDEX IF NOT EXISTS idx_rewards_score ON rewards(project, score DESC)"
         )
-        self.persistence.manager.get_connection().commit()
 
     def _load_weights(self) -> Dict[str, float]:
         """Load weights from project facts, fall back to defaults."""

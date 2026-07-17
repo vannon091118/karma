@@ -55,7 +55,7 @@ SKILL_REGISTRY = SCRIPTS_DIR / "skill_registry.py"
 STALENESS_CHECK = SCRIPTS_DIR / "staleness_check.py"
 
 # Runtime modules imported directly via the installed package
-from karma.runtime import memory_core, orchestrator, context_optimizer, prompt_engine, platform_adapter
+from karma.experimental_runtime import memory_core, orchestrator, context_optimizer, prompt_engine, platform_adapter
 
 
 # ─── Helpers ────────────────────────────────────────────────────────────────

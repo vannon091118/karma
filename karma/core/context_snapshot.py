@@ -16,9 +16,10 @@ from karma.core.persistence import PersistenceLayer
 class ContextSnapshotStore:
     def __init__(self, persistence: PersistenceLayer):
         self.persistence = persistence
-        self._ensure_schema()
+        self.persistence.ensure_schema("context_snapshot", self._create_schema)
 
-    def _ensure_schema(self) -> None:
+    def _create_schema(self) -> None:
+        """DDL only — called at most once per PersistenceLayer instance."""
         self.persistence.execute("""
             CREATE TABLE IF NOT EXISTS context_snapshots (
                 id TEXT PRIMARY KEY,
@@ -27,7 +28,6 @@ class ContextSnapshotStore:
                 created_at TEXT NOT NULL
             )
         """)
-        self.persistence.manager.get_connection().commit()
 
     def save_snapshot(self, context_text: str) -> str:
         """Saves a compressed snapshot of the context and returns its ID."""

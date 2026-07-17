@@ -24,9 +24,10 @@ class KnowledgeGraph:
     def __init__(self, persistence: PersistenceLayer, project: str):
         self.persistence = persistence
         self.project = project
-        self._ensure_schema()
+        self.persistence.ensure_schema("knowledge_graph", self._create_schema)
 
-    def _ensure_schema(self) -> None:
+    def _create_schema(self) -> None:
+        """DDL only — called at most once per PersistenceLayer instance."""
         self.persistence.execute("""
             CREATE TABLE IF NOT EXISTS kg_edges (
                 project TEXT NOT NULL,
@@ -41,7 +42,6 @@ class KnowledgeGraph:
                 PRIMARY KEY (project, task, fact_domain, fact_key, relation)
             )
         """)
-        self.persistence.manager.get_connection().commit()
 
     def update_from_experience(self, experience_id: str, reward_score: float) -> None:
         """

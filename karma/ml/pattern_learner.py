@@ -102,9 +102,10 @@ class PatternLearner:
     def __init__(self, persistence: PersistenceLayer, project: str) -> None:
         self.persistence = persistence
         self.project = project
-        self._ensure_schema()
+        self.persistence.ensure_schema("pattern_learner", self._create_schema)
 
-    def _ensure_schema(self) -> None:
+    def _create_schema(self) -> None:
+        """DDL only — called at most once per PersistenceLayer instance."""
         self.persistence.execute("""
             CREATE TABLE IF NOT EXISTS patterns (
                 pattern_id    TEXT PRIMARY KEY,
@@ -130,7 +131,6 @@ class PatternLearner:
         self.persistence.execute(
             "CREATE INDEX IF NOT EXISTS idx_patterns_sig ON patterns(task_signature)"
         )
-        self.persistence.manager.get_connection().commit()
 
     # ─── Store ────────────────────────────────────────────────────────────
 

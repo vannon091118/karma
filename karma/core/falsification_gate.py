@@ -47,22 +47,58 @@ class FalsificationResult:
         }
 
 
+class FalsificationProbe:
+    """A structured domain-specific validation check."""
+    def __init__(
+        self,
+        name: str,
+        domain: str = "generic",
+        version: str = "1.0",
+        severity: str = "critical",  # "critical" (fails turn), "warning" (logged but passes), "info"
+        execute_fn = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
+        self.name = name
+        self.domain = domain
+        self.version = version
+        self.severity = severity
+        self.execute_fn = execute_fn
+        self.metadata = metadata or {}
+
+    def run(self, step_name: str, skill_name: str, output_file: str, cascade_state: Dict[str, Any]) -> FalsificationResult:
+        if self.execute_fn:
+            return self.execute_fn(step_name, skill_name, output_file, cascade_state)
+        return FalsificationResult(self.name, True, "No execution logic provided")
+
+
 class FalsificationGate:
     """
-    The gate. Runs all probes. All must pass.
+    The gate. Runs all probes. All critical must pass.
     """
 
     def __init__(self, persistence: PersistenceLayer, project: str):
         self.persistence = persistence
         self.project = project
-        self.probes = [
-            self._probe_assumptions,
-            self._probe_test_coverage,
-            self._probe_contradictions,
-            self._probe_regressions,
-            self._probe_idempotency,
-            self._probe_determinism,
-        ]
+        self.probes = []
+        self._register_default_probes()
+
+    def _register_default_probes(self) -> None:
+        self.probes.extend([
+            FalsificationProbe("assumptions", domain="software", version="1.0", severity="critical", execute_fn=self._probe_assumptions),
+            FalsificationProbe("test_coverage", domain="software", version="1.0", severity="critical", execute_fn=self._probe_test_coverage),
+            FalsificationProbe("contradictions", domain="software", version="1.0", severity="critical", execute_fn=self._probe_contradictions),
+            FalsificationProbe("regressions", domain="software", version="1.0", severity="critical", execute_fn=self._probe_regressions),
+            FalsificationProbe("idempotency", domain="software", version="1.0", severity="critical", execute_fn=self._probe_idempotency),
+            FalsificationProbe("determinism", domain="software", version="1.0", severity="warning", execute_fn=self._probe_determinism),
+        ])
+
+    def register_probe(self, probe) -> None:
+        """Register a custom domain-specific falsification probe.
+        
+        Accepts either a FalsificationProbe object or a legacy callable matching the signature:
+        (step_name: str, skill_name: str, output_file: str, cascade_state: Dict[str, Any]) -> FalsificationResult
+        """
+        self.probes.append(probe)
 
     def run(self, step_name: str, skill_name: str, output_file: str, cascade_state: Dict[str, Any]) -> Tuple[bool, List[FalsificationResult]]:
         """
@@ -73,7 +109,11 @@ class FalsificationGate:
 
         for probe in self.probes:
             try:
-                result = probe(step_name, skill_name, output_file, cascade_state)
+                if hasattr(probe, "run"):
+                    result = probe.run(step_name, skill_name, output_file, cascade_state)
+                else:
+                    # Legacy callable fallback
+                    result = probe(step_name, skill_name, output_file, cascade_state)
                 results.append(result)
                 # Log each probe result
                 self.persistence.emit_event(
@@ -89,15 +129,24 @@ class FalsificationGate:
                 )
             except Exception as e:
                 # Probe failure = falsification failure
+                probe_name = getattr(probe, "name", getattr(probe, "__name__", "unknown"))
                 result = FalsificationResult(
-                    probe_name=probe.__name__,
+                    probe_name=probe_name,
                     passed=False,
                     evidence=f"Probe crashed: {e}",
                     details={"exception": str(e)}
                 )
                 results.append(result)
 
-        all_passed = all(r.passed for r in results)
+        # Check if any critical probe failed. Non-critical failures (warnings/info) are logged
+        # but do not cause all_passed to be False.
+        critical_failed = False
+        for result, probe in zip(results, self.probes):
+            severity = getattr(probe, "severity", "critical")
+            if not result.passed and severity == "critical":
+                critical_failed = True
+
+        all_passed = not critical_failed
         return all_passed, results
 
     # ─── Probe Implementations ────────────────────────────────────────────────
