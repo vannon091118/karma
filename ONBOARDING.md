@@ -35,15 +35,15 @@ dafür sorgt, dass jeder die richtigen Informationen hat.
 ## 3. Installation
 
 ```bash
-cd /path/to/LLM.Middleware.Conxtex.Framework
+cd /path/to/karma
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e ./llm_middleware
-# → erstellt globalen Befehl: llm-mw
+pip install -e ./karma
+# → erstellt globalen Befehl: karma
 ```
 
 Test:
 ```bash
-llm-mw --help
+karma --help
 ```
 
 ---
@@ -57,9 +57,9 @@ Zwei Wege:
 Im Projektordner ausführen:
 ```bash
 cd /path/to/mein-projekt
-llm-mw init
+karma init
 ```
-Erstellt `.llm-mw/` mit:
+Erstellt `.karma/` mit:
 - `index.md` — Domain-Übersicht (TOC)
 - `inventory.md` — Skill-Manifest (welche Skills → welche Domains)
 - `scopes.md` — aktive Domains für dieses Projekt
@@ -70,7 +70,7 @@ Erstellt `.llm-mw/` mit:
 Ein interaktiver Wizard, der die Konzepte erklärt, nach Projektname und
 relevanten Domains fragt und dann `init` für dich ausführt:
 ```bash
-llm-mw onboard
+karma onboard
 ```
 
 ---
@@ -78,12 +78,12 @@ llm-mw onboard
 ## 5. Tägliche Arbeit
 
 ```bash
-llm-mw status --project mein-projekt     # Sync-Status ansehen
-llm-mw memory get engine version_compat   # eine Fakt lesen
-llm-mw memory set ui '{"theme":"dark"}'      # eine Fakt schreiben
-llm-mw skill list                          # verfügbare Skills
-llm-mw dispatch "Baue das UI-Menü" --project mein-projekt  # Skills auto-wählen + Delegate-Tasks bauen
-llm-mw prompt generate --platform claude   # Prompt für Zielplattform
+karma status --project mein-projekt     # Sync-Status ansehen
+karma memory get engine version_compat   # eine Fakt lesen
+karma memory set ui '{"theme":"dark"}'      # eine Fakt schreiben
+karma skill list                          # verfügbare Skills
+karma dispatch "Baue das UI-Menü" --project mein-projekt  # Skills auto-wählen + Delegate-Tasks bauen
+karma prompt generate --platform claude   # Prompt für Zielplattform
 ```
 
 ---
@@ -91,8 +91,8 @@ llm-mw prompt generate --platform claude   # Prompt für Zielplattform
 ## 6. Architektur (kurz)
 
 ```
-llm_middleware/
-├── cli.py              # Einstiegspunkt (llm-mw)
+karma/
+├── cli.py              # Einstiegspunkt (karma)
 ├── core/
 │   ├── persistence.py  # SQLite (WAL) — projekt-isoliert, idempotente Migration
 │   ├── memory.py       # MemoryBus, Projekt-Memory, Fakt-Index
@@ -121,5 +121,5 @@ llm_middleware/
   Gate es nicht widerlegen konnte.
 - **SSOT** — Domains leben einmalig in `domains/MANIFEST.json`.
 - **Projekt-Isolation** — jede Persistence ist eine eigene SQLite-Datei
-  (`~/.llm-middleware/projects/<projekt>.db`).
+  (`~/.karma/projects/<projekt>.db`).
 - **Keine API-Keys** — vollständig lokal, dateibasiert.

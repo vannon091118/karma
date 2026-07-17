@@ -174,7 +174,7 @@ This makes it possible to compare `Policy v1` against `Policy v2` without destro
 ## Project Structure
 
 ```
-llm_middleware/
+karma/
 ├── core/
 │   ├── persistence.py          # SQLite factory, transactions, schema migration
 │   ├── context_snapshot.py     # Immutable, compressed context archive
@@ -208,16 +208,16 @@ cd runtime
 pip install -e .
 
 # Initialize a project
-llm-mw project create my-project
+karma project create my-project
 
 # Store some knowledge
-llm-mw memory set my-project engine architecture "Cascade pipeline with falsification"
+karma memory set my-project engine architecture "Cascade pipeline with falsification"
 
 # Generate a cascade prompt
-llm-mw prompt generate my-project --step research
+karma prompt generate my-project --step research
 
 # Complete a step (triggers the full ML feedback loop)
-llm-mw cascade complete my-project research output.md
+karma cascade complete my-project research output.md
 ```
 
 ---
@@ -261,7 +261,7 @@ The next layer — **Runtime Governance** — will introduce:
 - [ ] **Experiment Management:** Named replay runs that produce isolated derived views for comparison
 - [ ] **Drift Detection:** Automated monitoring of rolling reward degradation per task
 - [ ] **Decision Learning:** Capturing the *decision space* (alternatives not taken) to enable counterfactual replay
-- [ ] **Observability CLI:** `llm-mw stats` aggregating failure trends, prompt variant health, KG fact churn
+- [ ] **Observability CLI:** `karma stats` aggregating failure trends, prompt variant health, KG fact churn
 - [ ] **Schema Governance:** Alembic-backed migrations with version history
 
 > See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical design, and the [Runtime Governance Design](docs/governance.md) for the L3 specification.

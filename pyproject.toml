@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llm-middleware"
-version = "0.3.0"
+name = "karma"
+version = "0.4.0"
 description = "LLM Middleware Runtime - Agent-agnostic context orchestration for any project"
 readme = "README.md"
 license = "MIT"
@@ -28,18 +28,18 @@ ml = [
 ]
 
 [project.scripts]
-llm-mw = "llm_middleware.cli:cli"
+karma = "karma.cli:cli"
 
 [tool.setuptools]
 packages = [
-    "llm_middleware",
-    "llm_middleware.core",
-    "llm_middleware.runtime",
-    "llm_middleware.skills",
-    "llm_middleware.ml",
-    "llm_middleware.bus",
-    "llm_middleware.agents",
-    "llm_middleware.plugins",
+    "karma",
+    "karma.core",
+    "karma.runtime",
+    "karma.skills",
+    "karma.ml",
+    "karma.bus",
+    "karma.agents",
+    "karma.plugins",
 ]
 
 [tool.ruff]
@@ -56,6 +56,6 @@ disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = [
-    "llm_middleware/tests",
+    "karma/tests",
 ]
 python_files = "test_*.py"

@@ -34,7 +34,7 @@ htmlcov/
 .DS_Store
 
 # Runtime data (local DBs, project state)
-.llm-mw/
+.karma/
 *.db
 
 # Secrets

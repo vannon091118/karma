@@ -9,7 +9,7 @@
 
 | Prinzip | Status | Nachweis |
 |---|---|---|
-| **Projektisolation** | ✅ Fertig | `~/.llm-middleware/projects/<name>.db` — jedes Projekt eigene SQLite-Datei |
+| **Projektisolation** | ✅ Fertig | `~/.karma/projects/<name>.db` — jedes Projekt eigene SQLite-Datei |
 | **Ein Persistenzpfad** | ✅ Fertig | `create_project_persistence()` — einziger Factory, kein Legacy-JSON |
 | **Falsification Gate** | ✅ Fertig | 6 Proben, Negativtest nachgewiesen |
 | **Needs Engine** | ✅ Fertig | 5 Detektoren, Lifecycle detected → resolved \| escalated |
@@ -24,7 +24,7 @@
 ## Persistenzpfad (Single Source of Truth)
 
 ```
-~/.llm-middleware/
+~/.karma/
 ├── middleware.db           # globale DB (active_project, cross-project)
 ├── skill_state.json        # Skill-Registry-State
 └── projects/
@@ -87,9 +87,9 @@ Knoten-Typen: `repository`, `module`, `file`, `class`, `dependency`, `history`, 
 Relationen: `contains`, `depends_on`, `authored_by`, `affects`, `has_history`, `reveals`, `mitigates`
 
 ```bash
-llm-mw graph add repository my_repo contains module core -p proj
-llm-mw graph list my_repo --direction both -p proj
-llm-mw graph traverse my_repo --depth 4 -p proj
+karma graph add repository my_repo contains module core -p proj
+karma graph list my_repo --direction both -p proj
+karma graph traverse my_repo --depth 4 -p proj
 ```
 
 ---
