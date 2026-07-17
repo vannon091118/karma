@@ -97,4 +97,4 @@ __all__ = [
     "cmd_suggest",
     "SkillLoader",
     "PlatformAdapter",
-]
+]from .turn_kernel import handle_turn, TurnRequest, TurnResult
