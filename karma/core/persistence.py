@@ -340,6 +340,7 @@ class PersistenceLayer:
         from karma.ml.pattern_learner import PatternLearner
         from karma.ml.needs_engine import NeedsEngine
         from karma.core.context_snapshot import ContextSnapshotStore
+        from karma.core.evidence import EvidenceStore
 
         ExperienceStore(self)      # registers "experience_store"
         KnowledgeGraph(self, "")   # registers "knowledge_graph"
@@ -347,6 +348,7 @@ class PersistenceLayer:
         PatternLearner(self, "")   # registers "pattern_learner"
         NeedsEngine(self)          # registers "needs_engine"
         ContextSnapshotStore(self) # registers "context_snapshot"
+        EvidenceStore(self)        # registers "evidence_store"
 
     # ─── Query Execution ─────────────────────────────────────────────────
 

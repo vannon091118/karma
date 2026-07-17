@@ -132,6 +132,21 @@ def handle_turn(persistence: PersistenceLayer, req: TurnRequest) -> TurnResult:
     finally:
         Path(tmp_path).unlink(missing_ok=True)
 
+    from karma.core.evidence import EvidenceStore, Claim, Evidence
+    evidence_store = EvidenceStore(persistence)
+    turn_claim = Claim.create(req.project, f"Turn execution for task: {req.task} completed successfully", domain="turn_execution")
+    for r in probe_results:
+        ev = Evidence.create(
+            claim_id=turn_claim.claim_id,
+            evidence_type=r.evidence_type,
+            source=f"GateProbe::{r.probe_name}",
+            confidence=r.evidence_strength,
+            metadata={"evidence_str": r.evidence_str, "details": r.details}
+        )
+        turn_claim.evidences.append(ev)
+    
+    evidence_store.save_claim(turn_claim)
+
     probes_dict = [r.to_dict() for r in probe_results]
 
     with persistence.transaction() as _conn:

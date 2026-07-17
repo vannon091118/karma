@@ -26,22 +26,31 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from karma.core.persistence import PersistenceLayer, create_persistence
+from karma.core.evidence import EvidenceType, Evidence, Claim
 
 
 class FalsificationResult:
-    """Result of a falsification probe."""
-    def __init__(self, probe_name: str, passed: bool, evidence: str, details: Optional[Dict[str, Any]] = None):
+    """Result of a falsification probe. Acts as an Evidence Producer."""
+    def __init__(self, probe_name: str, claim_statement: str, evidence_type: EvidenceType, executed: bool, passed: bool, evidence_strength: float, evidence_str: str = "", details: Optional[Dict[str, Any]] = None):
         self.probe_name = probe_name
+        self.claim_statement = claim_statement
+        self.evidence_type = evidence_type
+        self.executed = executed
         self.passed = passed
-        self.evidence = evidence
+        self.evidence_strength = evidence_strength
+        self.evidence_str = evidence_str
         self.details = details or {}
         self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "probe": self.probe_name,
+            "claim": self.claim_statement,
+            "type": self.evidence_type.value,
+            "executed": self.executed,
             "passed": self.passed,
-            "evidence": self.evidence,
+            "evidence_strength": self.evidence_strength,
+            "evidence": self.evidence_str,
             "details": self.details,
             "timestamp": self.timestamp
         }
@@ -68,7 +77,7 @@ class FalsificationProbe:
     def run(self, step_name: str, skill_name: str, output_file: str, cascade_state: Dict[str, Any]) -> FalsificationResult:
         if self.execute_fn:
             return self.execute_fn(step_name, skill_name, output_file, cascade_state)
-        return FalsificationResult(self.name, True, "No execution logic provided")
+        return FalsificationResult(self.name, "Probe executed", EvidenceType.RUNTIME, False, False, 0.0, "No execution logic provided")
 
 
 class FalsificationGate:
@@ -128,12 +137,16 @@ class FalsificationGate:
                     }
                 )
             except Exception as e:
-                # Probe failure = falsification failure
+                # Probe failure = 0.0 confidence evidence
                 probe_name = getattr(probe, "name", getattr(probe, "__name__", "unknown"))
                 result = FalsificationResult(
                     probe_name=probe_name,
+                    claim_statement=f"Probe {probe_name} ran successfully",
+                    evidence_type=EvidenceType.RUNTIME,
+                    executed=True,
                     passed=False,
-                    evidence=f"Probe crashed: {e}",
+                    evidence_strength=0.0,
+                    evidence_str=f"Probe crashed: {e}",
                     details={"exception": str(e)}
                 )
                 results.append(result)
@@ -159,7 +172,7 @@ class FalsificationGate:
         - Each item must include a `source:` reference for traceability.
         """
         if not os.path.exists(output_file):
-            return FalsificationResult("assumptions", False, "Output file missing", {})
+            return FalsificationResult("assumptions", "Output declares sourced assumptions", EvidenceType.SOURCE, True, False, 0.0, "Output file missing", {})
 
         content = Path(output_file).read_text(encoding="utf-8")
         # Only scan frontmatter delimited by --- / ``` blocks
@@ -190,16 +203,22 @@ class FalsificationGate:
 
         unsourced = [a for a in assumptions if isinstance(a, dict) and "source" not in a]
         passed = bool(assumptions) and not unsourced
-        evidence = (
+        evidence_str = (
             f"Assumptions declared: {len(assumptions)}. "
             f"Missing source references: {len(unsourced)}."
         )
         if unsourced:
-            evidence += f" Details: unsourced={unsourced[:3]}"
+            evidence_str += f" Details: unsourced={unsourced[:3]}"
+            
+        confidence = 0.4 if passed else 0.0
         return FalsificationResult(
             "assumptions",
+            "Output declares sourced assumptions",
+            EvidenceType.SOURCE,
+            True,
             passed,
-            evidence,
+            confidence,
+            evidence_str,
             {"assumptions": assumptions[:10], "unsourced": unsourced[:5]},
         )
 
@@ -215,7 +234,7 @@ class FalsificationGate:
         project_root = self._find_project_root()
 
         if not project_root:
-            return FalsificationResult("test_coverage", False, "Could not determine project root", {})
+            return FalsificationResult("test_coverage", "Changes covered by tests", EvidenceType.TEST, True, False, 0.0, "Could not determine project root", {})
 
         # Look for test files
         test_patterns = [
@@ -229,7 +248,7 @@ class FalsificationGate:
             test_files.extend(project_root.glob(pattern))
 
         if not test_files:
-            return FalsificationResult("test_coverage", False, "No test files found in project", {"test_files_found": 0})
+            return FalsificationResult("test_coverage", "Changes covered by tests", EvidenceType.TEST, True, False, 0.0, "No test files found in project", {"test_files_found": 0})
 
         # Run tests (with timeout) - lenient mode: log but don't hard-fail
         try:
@@ -282,9 +301,14 @@ class FalsificationGate:
                 passed = True
                 evidence = f"No test runner found (pytest, cargo). Tests found: {len(test_files)}. Skipping execution."
 
+        confidence = 0.7 if passed else 0.0
         return FalsificationResult(
             "test_coverage",
+            "Changes covered by passing tests",
+            EvidenceType.TEST,
+            True,
             passed,
+            confidence,
             evidence,
             {"test_files_found": len(test_files)}
         )
@@ -297,7 +321,7 @@ class FalsificationGate:
         - Check against MANIFEST.json domain rules.
         """
         if not os.path.exists(output_file):
-            return FalsificationResult("contradictions", False, "Output file missing", {})
+            return FalsificationResult("contradictions", "Changes do not contradict existing code", EvidenceType.SOURCE, True, False, 0.0, "Output file missing", {})
 
         content = Path(output_file).read_text(encoding="utf-8")
         project_root = self._find_project_root()
@@ -348,14 +372,19 @@ class FalsificationGate:
                     pass
 
         passed = len(contradictions) == 0
-        evidence = f"Contradictions found: {len(contradictions)}"
+        evidence_str = f"Contradictions found: {len(contradictions)}"
         if contradictions:
-            evidence += f". Details: {contradictions[:5]}"
+            evidence_str += f". Details: {contradictions[:5]}"
 
+        confidence = 0.4 if passed else 0.0
         return FalsificationResult(
             "contradictions",
+            "Changes do not contradict existing invariants",
+            EvidenceType.SOURCE,
+            True,
             passed,
-            evidence,
+            confidence,
+            evidence_str,
             {"contradictions": contradictions}
         )
 
@@ -375,14 +404,19 @@ class FalsificationGate:
                 regressions.append(f"Regression marker found: '{marker}'")
 
         passed = len(regressions) == 0
-        evidence = f"Regression indicators: {len(regressions)}"
+        evidence_str = f"Regression indicators: {len(regressions)}"
         if regressions:
-            evidence += f". Details: {regressions[:5]}"
+            evidence_str += f". Details: {regressions[:5]}"
 
+        confidence = 0.9 if passed else 0.0
         return FalsificationResult(
             "regressions",
+            "Changes preserve previously working behavior",
+            EvidenceType.RUNTIME,
+            True,
             passed,
-            evidence,
+            confidence,
+            evidence_str,
             {"regressions": regressions}
         )
 
@@ -398,12 +432,12 @@ class FalsificationGate:
         project = getattr(self, "project", "default")
 
         if not _Path(output_file).exists():
-            return FalsificationResult("idempotency", False, "Output file missing", {})
+            return FalsificationResult("idempotency", "Step execution is deterministic/idempotent", EvidenceType.RUNTIME, True, False, 0.0, "Output file missing", {})
 
         try:
             content = _Path(output_file).read_text(encoding="utf-8")
         except OSError as exc:
-            return FalsificationResult("idempotency", False, f"Cannot read output: {exc}", {})
+            return FalsificationResult("idempotency", "Step execution is deterministic/idempotent", EvidenceType.RUNTIME, True, False, 0.0, f"Cannot read output: {exc}", {})
 
         current_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
         fact_key = f"output_hash:{step_name}:{skill_name}"
@@ -412,20 +446,20 @@ class FalsificationGate:
         if last_hash is None:
             self.persistence.set_fact(self.project, "idempotency", fact_key, current_hash)
             return FalsificationResult(
-                "idempotency", True,
+                "idempotency", "Step execution is deterministic/idempotent", EvidenceType.RUNTIME, True, True, 0.9,
                 "First execution: output hash registered for future idempotency checks.",
                 {"artifact": output_file, "artifact_hash": current_hash, "is_first_run": True}
             )
         
         if last_hash == current_hash:
             return FalsificationResult(
-                "idempotency", True,
+                "idempotency", "Step execution is deterministic/idempotent", EvidenceType.RUNTIME, True, True, 0.9,
                 "Idempotency verified: output hash matches previous run.",
                 {"artifact": output_file, "artifact_hash": current_hash, "previous_hash": last_hash}
             )
         
         return FalsificationResult(
-            "idempotency", False,
+            "idempotency", "Step execution is deterministic/idempotent", EvidenceType.RUNTIME, True, False, 0.0,
             f"Idempotency check failed: output hash {current_hash} differs from previous hash {last_hash}.",
             {"artifact": output_file, "artifact_hash": current_hash, "previous_hash": last_hash}
         )
@@ -460,7 +494,11 @@ class FalsificationGate:
             else:
                 return FalsificationResult(
                     "determinism",
-                    True,
+                    "Code does not rely on non-deterministic APIs",
+                    EvidenceType.SOURCE,
+                    False, # Skipped / not executed
+                    True, # Lenient pass
+                    0.0,  # No evidence
                     "Passed (Skipped): no Python source code found to audit for determinism.",
                     {"searched": [str(c) for c in candidates]}
                 )
@@ -468,7 +506,7 @@ class FalsificationGate:
         try:
             source = source_path.read_text(encoding="utf-8")
         except OSError as exc:
-            return FalsificationResult("determinism", False, f"Cannot read source file: {exc}", {"source": str(source_path)})
+            return FalsificationResult("determinism", "Code does not rely on non-deterministic APIs", EvidenceType.SOURCE, True, False, 0.0, f"Cannot read source file: {exc}", {"source": str(source_path)})
 
         violations = []
         try:
@@ -491,16 +529,22 @@ class FalsificationGate:
                         if func.id in {"random", "uuid", "requests", "httpx"}:
                             violations.append(f"call {func.id} at {node.lineno}:{node.col_offset}")
         except SyntaxError as exc:
-            return FalsificationResult("determinism", False, f"Step source parse error: {exc}", {"source": str(source_path)})
+            return FalsificationResult("determinism", "Code does not rely on non-deterministic APIs", EvidenceType.SOURCE, True, False, 0.0, f"Step source parse error: {exc}", {"source": str(source_path)})
 
         passed = not violations
-        evidence = f"Violations: {len(violations)}. Source: {source_path}."
+        evidence_str = f"Violations: {len(violations)}. Source: {source_path}."
         if violations:
-            evidence += f" Details: {violations[:5]}"
+            evidence_str += f" Details: {violations[:5]}"
+            
+        confidence = 0.4 if passed else 0.0
         return FalsificationResult(
             "determinism",
+            "Code does not rely on non-deterministic APIs",
+            EvidenceType.SOURCE,
+            True,
             passed,
-            evidence,
+            confidence,
+            evidence_str,
             {"violations": violations[:10], "source": str(source_path)},
         )
 
