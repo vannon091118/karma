@@ -30,17 +30,39 @@ from karma.core.evidence import EvidenceType, Evidence, Claim
 
 
 class FalsificationResult:
-    """Result of a falsification probe. Acts as an Evidence Producer."""
-    def __init__(self, probe_name: str, claim_statement: str, evidence_type: EvidenceType, executed: bool, passed: bool, evidence_strength: float, evidence_str: str = "", details: Optional[Dict[str, Any]] = None):
+    """Result of a falsification probe. Acts as an Evidence Producer.
+
+    Supports two construction modes:
+    - Full (new API):  FalsificationResult(probe_name, claim_statement, evidence_type, executed, passed, evidence_strength, evidence_str, details)
+    - Legacy (simple): FalsificationResult(probe_name, passed, evidence_str)  -> fills defaults for the rest
+    """
+    def __init__(self, probe_name: str, claim_statement=None, evidence_type=None, executed=None, passed=None, evidence_strength=None, evidence_str: str = "", details: Optional[Dict[str, Any]] = None):
+        # Legacy compat: FalsificationResult("probe_name", True, "evidence str")
+        # In legacy mode, claim_statement receives a bool (passed) and evidence_type receives a string.
+        if isinstance(claim_statement, bool) and evidence_type is not None and passed is None:
+            # Legacy positional: (probe_name, passed, evidence_str)
+            evidence_str = str(evidence_type) if evidence_str == "" else str(evidence_type)
+            passed = claim_statement
+            claim_statement = f"Probe {probe_name} ran successfully"
+            evidence_type = EvidenceType.RUNTIME
+            executed = True
+            evidence_strength = 0.9 if passed else 0.0
+            details = details or {}
+
         self.probe_name = probe_name
-        self.claim_statement = claim_statement
-        self.evidence_type = evidence_type
-        self.executed = executed
-        self.passed = passed
-        self.evidence_strength = evidence_strength
+        self.claim_statement = claim_statement or f"Probe {probe_name} ran successfully"
+        self.evidence_type = evidence_type or EvidenceType.RUNTIME
+        self.executed = executed if executed is not None else True
+        self.passed = passed if passed is not None else False
+        self.evidence_strength = evidence_strength if evidence_strength is not None else 0.0
         self.evidence_str = evidence_str
         self.details = details or {}
         self.timestamp = datetime.now(timezone.utc).isoformat()
+
+    @property
+    def evidence(self) -> str:
+        """Backward-compat alias for evidence_str."""
+        return self.evidence_str
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -133,7 +155,7 @@ class FalsificationGate:
                         "skill": skill_name,
                         "probe": result.probe_name,
                         "passed": result.passed,
-                        "evidence": result.evidence
+                        "evidence": result.evidence_str
                     }
                 )
             except Exception as e:

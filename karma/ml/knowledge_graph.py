@@ -82,7 +82,7 @@ class KnowledgeGraph:
             return  # Neutral experience, doesn't strongly drive the graph
             
         for domain, keys in facts.items():
-            for key in keys.keys():
+            for key in keys:
                 self._upsert_edge(task, domain, key, relation, delta, now)
 
     def _upsert_edge(self, task: str, domain: str, key: str, relation: str, delta: float, now: str) -> None:
