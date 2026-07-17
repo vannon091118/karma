@@ -3,16 +3,16 @@
 <br/>
 
 ```
-██████╗ ██╗   ██╗███╗   ██╗████████╗██╗███╗   ███╗███████╗
-██╔══██╗██║   ██║████╗  ██║╚══██╔══╝██║████╗ ████║██╔════╝
-██████╔╝██║   ██║██╔██╗ ██║   ██║   ██║██╔████╔██║█████╗  
-██╔══██╗██║   ██║██║╚██╗██║   ██║   ██║██║╚██╔╝██║██╔══╝  
-██║  ██║╚██████╔╝██║ ╚████║   ██║   ██║██║ ╚═╝ ██║███████╗
-╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝     ╚═╝╚══════╝
+██╗  ██╗ █████╗ ██████╗ ███╗   ███╗ █████╗
+██║ ██╔╝██╔══██╗██╔══██╗████╗ ████║██╔══██╗
+█████╔╝ ███████║██████╔╝██╔████╔██║███████║
+██╔═██╗ ██╔══██║██╔══██╗██║╚██╔╝██║██╔══██║
+██║  ██╗██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
 ```
 
-**An autonomous runtime kernel for LLM agents.**  
-Not a framework. Not a wrapper. A control plane that learns, falsifies, and explains itself.
+**Kernel for Autonomous Runtime Memory Architecture**  
+A learning system that falsifies its own outputs before it calls anything "done."
 
 <br/>
 
@@ -22,6 +22,18 @@ Not a framework. Not a wrapper. A control plane that learns, falsifies, and expl
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 </div>
+
+---
+
+## The Manifesto
+
+Every first letter of every rule below spells the name of this project. That is not a coincidence.
+
+- **K**eep every execution immutable. What happened, happened. The past is not a draft.
+- **A**ssume nothing, falsify everything. Confidence without evidence is a bug dressed as a feature.
+- **R**ewards are interpretations, not facts — only the raw event is ground truth.
+- **M**emory without lineage is organized gossip. You need to know where knowledge came from.
+- **A**gents that cannot explain their own decisions are not intelligent. They are expensive autocomplete with unusually good PR.
 
 ---
 
@@ -37,7 +49,7 @@ And then they call it a day.
 
 The result is a system that can *act* but cannot *explain*, *learn*, or *correct itself*. If the output was wrong, you don't know why. If it improved, you don't know what caused it. If the model drifts, you find out when production breaks.
 
-**Runtime doesn't solve that. It builds the feedback loops first.**
+**KARMA doesn't solve the symptom. It builds the feedback loops first.**
 
 ---
 
@@ -102,7 +114,7 @@ The system is split into three layers. They have exactly one communication direc
 ## Key Components
 
 ### 🔒 Experience Store
-> *"The past must not be rewritten."*
+> *"The past is not a suggestion."*
 
 Every execution writes one immutable record to SQLite. That's it. No updates. No deletes. The schema stores:
 
@@ -191,7 +203,7 @@ llm_middleware/
 
 ```bash
 # Clone and install
-git clone https://github.com/YOUR_USERNAME/runtime
+git clone https://github.com/vannon091118/runtime
 cd runtime
 pip install -e .
 
@@ -252,7 +264,7 @@ The next layer — **Runtime Governance** — will introduce:
 - [ ] **Observability CLI:** `llm-mw stats` aggregating failure trends, prompt variant health, KG fact churn
 - [ ] **Schema Governance:** Alembic-backed migrations with version history
 
-> See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical design, and the [Runtime Governance Design](docs/runtime_governance_architecture.md) for the L3 specification.
+> See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical design, and the [Runtime Governance Design](docs/governance.md) for the L3 specification.
 
 ---
 
