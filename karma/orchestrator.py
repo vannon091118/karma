@@ -335,15 +335,41 @@ def complete_step(project: str, step_name: str, output_file: str, persistence=No
     # Get skill name for this step
     skill_name = state["steps"][step_name].get("skill", "unknown")
 
-    # ─── FALSIFICATION GATE ──────────────────────────────────────────────────
-    print(f"🔍 Running falsification gate for step '{step_name}' (skill: {skill_name})...")
-    passed, results = run_falsification_gate(persistence, project, step_name, skill_name, output_file, state)
+    # ─── TURN KERNEL (DEPRECATED WRAPPER) ────────────────────────────────────
+    import uuid
+    import warnings
+    from karma.turn_kernel import handle_turn, TurnRequest, GateFailure
 
-    if not passed:
+    warnings.warn("complete_step() is deprecated, use handle_turn() directly", DeprecationWarning)
+
+    print(f"🔍 Running TURN KERNEL for step '{step_name}' (skill: {skill_name})...")
+    try:
+        with open(output_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"ERROR reading output: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    req = TurnRequest(
+        project=project,
+        request_id=f"cascade-{step_name}-{uuid.uuid4().hex[:8]}",
+        task=step_name,
+        content=content,
+        skill_name=skill_name,
+        outcome="success",
+    )
+
+    try:
+        result = handle_turn(persistence, req)
+    except GateFailure as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    if not result.gate_passed:
         print(f"❌ FALSIFICATION GATE FAILED for step '{step_name}'", file=sys.stderr)
-        for r in results:
-            status = "✅" if r.passed else "❌"
-            print(f"   {status} {r.probe_name}: {r.evidence}", file=sys.stderr)
+        for r in result.probes:
+            status = "✅" if r.get("passed") else "❌"
+            print(f"   {status} {r.get('probe_name')}: {r.get('evidence')}", file=sys.stderr)
         
         # Mark step as failed due to falsification
         state["steps"][step_name]["status"] = "failed"
@@ -357,7 +383,7 @@ def complete_step(project: str, step_name: str, output_file: str, persistence=No
             "domain": "cascade",
             "task": f"step_falsification_failed:{step_name}",
             "outcome": "failure",
-            "evidence": json.dumps([r.to_dict() for r in results]),
+            "evidence": json.dumps(result.probes),
         })
         
         print(f"   Step marked as FAILED. Cascade BLOCKED.", file=sys.stderr)
@@ -369,7 +395,7 @@ def complete_step(project: str, step_name: str, output_file: str, persistence=No
     state["steps"][step_name]["status"] = "completed"
     state["steps"][step_name]["output_path"] = os.path.abspath(output_file)
     state["steps"][step_name]["completed_at"] = datetime.now(timezone.utc).isoformat()
-    state["steps"][step_name]["falsification"] = [r.to_dict() for r in results]
+    state["steps"][step_name]["falsification"] = result.probes
 
     # Check if cascade is fully done
     all_done = all(s["status"] == "completed" for s in state["steps"].values())

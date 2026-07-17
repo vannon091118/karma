@@ -61,6 +61,7 @@ class TurnRequest:
     skill_name: str = "external_agent"
     outcome: str = "success"  
     user_feedback: Optional[float] = None
+    context_snapshot_id: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -143,6 +144,7 @@ def handle_turn(persistence: PersistenceLayer, req: TurnRequest) -> TurnResult:
         gate_passed=gate_passed,
         reward_model_version=policy.reward_model_version,
         gate_version=policy.gate_version,
+        context_snapshot_id=req.context_snapshot_id,
     )
     ExperienceStore(persistence).record(exp)
 
